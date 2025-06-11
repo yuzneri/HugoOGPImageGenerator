@@ -1,0 +1,213 @@
+package main
+
+import (
+	"bytes"
+	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
+	tmpl "text/template"
+)
+
+// OGPGenerator is the main orchestrator for OGP image generation.
+// It manages configuration, font loading, background processing, and text rendering.
+type OGPGenerator struct {
+	config           *Config
+	contentDir       string
+	projectRoot      string
+	configDir        string
+	fontManager      *FontManager
+	bgProcessor      *BackgroundProcessor
+	imageRenderer    *ImageRenderer
+	articleProcessor *ArticleProcessor
+}
+
+// NewOGPGenerator creates a new OGPGenerator instance with all necessary components.
+// It loads the configuration, initializes processors, and sets up the text rendering pipeline.
+func NewOGPGenerator(configPath, contentDir, projectRoot string) (*OGPGenerator, error) {
+	config, err := loadConfig(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load config: %w", err)
+	}
+
+	configDir := filepath.Dir(configPath)
+
+	fontManager := NewFontManager(configDir)
+	bgProcessor := NewBackgroundProcessor(configDir)
+
+	startProhibited, endProhibited := buildProhibitedMaps(config)
+	textProcessor := NewTextProcessor(startProhibited, endProhibited, config.Text.LetterSpacing)
+	imageRenderer := NewImageRenderer(textProcessor)
+
+	articleProcessor := NewArticleProcessor(config, contentDir, configDir, fontManager, bgProcessor, imageRenderer)
+
+	return &OGPGenerator{
+		config:           config,
+		contentDir:       contentDir,
+		projectRoot:      projectRoot,
+		configDir:        configDir,
+		fontManager:      fontManager,
+		bgProcessor:      bgProcessor,
+		imageRenderer:    imageRenderer,
+		articleProcessor: articleProcessor,
+	}, nil
+}
+
+// TemplateData represents the data available to filename templates.
+// It provides access to article metadata for dynamic filename generation.
+type TemplateData struct {
+	Title       string                 // Article title
+	Description string                 // Article description
+	Date        interface{}            // Article date (from front matter)
+	URL         string                 // Custom URL (if set in front matter)
+	RelPath     string                 // Relative path from content directory
+	Format      string                 // Output format (png, jpg)
+	Fields      map[string]interface{} // All front matter fields
+}
+
+// sanitizeFilename removes potentially dangerous characters from filename.
+// It prevents path traversal attacks and ensures filesystem compatibility.
+func sanitizeFilename(filename string) string {
+	// Remove path traversal attempts
+	filename = strings.ReplaceAll(filename, "..", "")
+
+	// Replace potentially problematic characters with safe alternatives
+	re := regexp.MustCompile(`[<>:"|?*\\]`)
+	filename = re.ReplaceAllString(filename, "_")
+
+	// Remove leading/trailing whitespace and dots
+	filename = strings.Trim(filename, " .")
+
+	return filename
+}
+
+// generateOutputFilename creates the output filename using template or default logic.
+// It supports Go template syntax with access to article metadata and automatically
+// appends file extensions based on the output format.
+func generateOutputFilename(config *Config, fm *FrontMatter, articlePath, contentDir string) (string, error) {
+	// Use template if configured
+	if config.Output.Filename != nil && *config.Output.Filename != "" {
+		templateStr := *config.Output.Filename
+
+		// Prepare template data
+		relPath, err := filepath.Rel(contentDir, articlePath)
+		if err != nil {
+			relPath = ""
+		}
+
+		data := TemplateData{
+			Title:       fm.Title,
+			Description: fm.Description,
+			Date:        fm.Date,
+			URL:         fm.URL,
+			RelPath:     relPath,
+			Format:      config.Output.Format,
+			Fields:      make(map[string]interface{}),
+		}
+
+		// Add all front matter fields to Fields map for flexible access
+		if fm.Fields != nil {
+			data.Fields = fm.Fields
+		}
+
+		// Add standard fields to Fields map for template access
+		data.Fields["title"] = fm.Title
+		data.Fields["description"] = fm.Description
+		data.Fields["date"] = fm.Date
+		data.Fields["url"] = fm.URL
+		data.Fields["tags"] = fm.Tags
+
+		// Parse and execute template
+		t, err := tmpl.New("filename").Parse(templateStr)
+		if err != nil {
+			return "", fmt.Errorf("failed to parse filename template: %w", err)
+		}
+
+		var buf bytes.Buffer
+		err = t.Execute(&buf, data)
+		if err != nil {
+			return "", fmt.Errorf("failed to execute filename template: %w", err)
+		}
+
+		filename := buf.String()
+
+		// Sanitize the result
+		filename = sanitizeFilename(filename)
+
+		// Ensure we have a valid filename
+		if filename == "" {
+			return "ogp." + config.Output.Format, nil
+		}
+
+		// Auto-append extension if not present
+		expectedExt := "." + config.Output.Format
+		if !strings.HasSuffix(strings.ToLower(filename), strings.ToLower(expectedExt)) {
+			filename = filename + expectedExt
+		}
+
+		return filename, nil
+	}
+
+	// Default behavior: ogp.{format}
+	return "ogp." + config.Output.Format, nil
+}
+
+// GenerateSingle generates an OGP image for a single article.
+// The articlePath can be relative (from contentDir) or absolute.
+func (g *OGPGenerator) GenerateSingle(articlePath string) error {
+	var fullArticlePath string
+	if filepath.IsAbs(articlePath) {
+		fullArticlePath = articlePath
+	} else {
+		fullArticlePath = filepath.Join(g.contentDir, articlePath)
+	}
+
+	if _, err := os.Stat(fullArticlePath); os.IsNotExist(err) {
+		return fmt.Errorf("article directory not found: %s", fullArticlePath)
+	}
+
+	indexPath := filepath.Join(fullArticlePath, "index.md")
+	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
+		return fmt.Errorf("index.md not found in: %s", fullArticlePath)
+	}
+
+	fmt.Printf("Generating OGP image for: %s\n", articlePath)
+	return g.articleProcessor.ProcessArticle(fullArticlePath, ProcessOptions{TestMode: false})
+}
+
+// GenerateTest generates a test OGP image to a temporary location.
+// This is useful for previewing images during development without overwriting production files.
+func (g *OGPGenerator) GenerateTest(articlePath string) error {
+	// testモードでは記事パスを直接使用（contentDir不要）
+	fullArticlePath := articlePath
+
+	if _, err := os.Stat(fullArticlePath); os.IsNotExist(err) {
+		return fmt.Errorf("article directory not found: %s", fullArticlePath)
+	}
+
+	indexPath := filepath.Join(fullArticlePath, "index.md")
+	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
+		return fmt.Errorf("index.md not found in: %s", fullArticlePath)
+	}
+
+	fmt.Printf("Testing OGP image for: %s\n", articlePath)
+	return g.articleProcessor.ProcessArticle(fullArticlePath, ProcessOptions{TestMode: true})
+}
+
+// GenerateAll generates OGP images for all articles in the content directory.
+// It walks through all directories containing index.md files and processes them.
+func (g *OGPGenerator) GenerateAll() error {
+	return filepath.WalkDir(g.contentDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if d.Name() == "index.md" {
+			articleDir := filepath.Dir(path)
+			return g.articleProcessor.ProcessArticle(articleDir, ProcessOptions{TestMode: false})
+		}
+
+		return nil
+	})
+}

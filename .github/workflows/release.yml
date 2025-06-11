@@ -1,0 +1,181 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.18'
+
+    - name: Download dependencies
+      run: go mod download
+
+    - name: Run tests
+      run: go test -v ./...
+
+    - name: Run go vet
+      run: go vet ./...
+
+    - name: Run go fmt
+      run: |
+        if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+          echo "Code is not formatted with gofmt:"
+          gofmt -s -l .
+          exit 1
+        fi
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            suffix: ""
+          - goos: linux
+            goarch: arm64
+            suffix: ""
+          - goos: darwin
+            goarch: amd64
+            suffix: ""
+          - goos: darwin
+            goarch: arm64
+            suffix: ""
+          - goos: windows
+            goarch: amd64
+            suffix: ".exe"
+          - goos: windows
+            goarch: arm64
+            suffix: ".exe"
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.18'
+
+    - name: Download dependencies
+      run: go mod download
+
+    - name: Generate version
+      id: version
+      run: |
+        VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "v0.1.0")
+        if [[ $VERSION != v* ]]; then
+          COMMIT_COUNT=$(git rev-list --count HEAD)
+          VERSION="v0.1.${COMMIT_COUNT}"
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION"
+
+    - name: Build binary
+      env:
+        GOOS: ${{ matrix.goos }}
+        GOARCH: ${{ matrix.goarch }}
+        CGO_ENABLED: 0
+      run: |
+        BINARY_NAME="ogp-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }}"
+        go build -ldflags="-s -w -X main.version=${{ steps.version.outputs.version }}" -o "$BINARY_NAME" .
+        
+        if [ "${{ matrix.goos }}" = "windows" ]; then
+          zip "${BINARY_NAME%.exe}.zip" "$BINARY_NAME" README.md
+        else
+          tar -czf "${BINARY_NAME}.tar.gz" "$BINARY_NAME" README.md
+        fi
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ogp-${{ matrix.goos }}-${{ matrix.goarch }}
+        path: |
+          ogp-${{ matrix.goos }}-${{ matrix.goarch }}*
+        retention-days: 1
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Generate version and changelog
+      id: version
+      run: |
+        VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "v0.1.0")
+        if [[ $VERSION != v* ]]; then
+          COMMIT_COUNT=$(git rev-list --count HEAD)
+          VERSION="v0.1.${COMMIT_COUNT}"
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: ./artifacts
+
+    - name: Prepare release assets
+      run: |
+        mkdir -p release-assets
+        find ./artifacts -name "*.tar.gz" -o -name "*.zip" | while read file; do
+          cp "$file" release-assets/
+        done
+        ls -la release-assets/
+
+    - name: Check if release exists
+      id: check_release
+      run: |
+        if gh release view "${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Delete existing release
+      if: steps.check_release.outputs.exists == 'true'
+      run: |
+        gh release delete "${{ steps.version.outputs.version }}" --yes
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Create Release
+      run: |
+        gh release create "${{ steps.version.outputs.version }}" \
+          --title "Hugo OGP Image Generator ${{ steps.version.outputs.version }}" \
+          --latest \
+          release-assets/*
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Update latest tag
+      run: |
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+        git tag -f latest
+        git push origin latest --force
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
