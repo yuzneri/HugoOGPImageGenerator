@@ -13,22 +13,22 @@ go build -o ogp
 
 ### Generate OGP for all articles
 ```bash
-./ogp-generator /path/to/hugo/project
+./ogp /path/to/hugo/project
 ```
 
 ### Generate for a specific article
 ```bash
-./ogp-generator --single /path/to/hugo/project "article/path"
+./ogp --single /path/to/hugo/project "article/path"
 ```
 
 ### Test mode
 ```bash
-./ogp-generator --test "/path/to/article/directory"
+./ogp --test "/path/to/article/directory"
 ```
 
 ### List all articles with OGP settings
 ```bash
-./ogp-generator --list /path/to/hugo/project
+./ogp --list /path/to/hugo/project
 ```
 
 ## Configuration
