@@ -36,69 +36,69 @@ When no `config.yaml` file is provided, or when specific options are omitted, th
 
 ```yaml
 background:
-  color: "#FFFFFF"  # White background
-  # image: null     # No background image by default
+  color: "#FFFFFF"
+  # image: null
 
 output:
-  directory: "public"  # Output to Hugo's public directory
-  format: "png"        # PNG format for images
-  # filename: null     # Default: "ogp.{format}"
+  directory: "public"
+  format: "png"
+  filename: "ogp"
 
 # Title text configuration
 title:
-  visible: true        # Whether to render title (default: true)
-  # content: null      # No default content template (uses article title)
-  font: ""             # Auto-detect system fonts
-  size: 64             # Font size in pixels
-  color: "#000000"     # Black text
+  visible: true
+  # content: null
+  # font: null
+  size: 64
+  color: "#000000"
   area:
-    x: 100             # Text area X position
-    y: 50              # Text area Y position
-    width: 1000        # Text area width
-    height: 250        # Text area height
-  block_position: "middle-center" # Text block position in area
-  line_alignment: "center"        # Individual line alignment
-  overflow: "shrink"              # Shrink text to fit area
-  min_size: 24.0                  # Minimum font size when shrinking
-  line_height: 1.2                # Line height multiplier
-  letter_spacing: 1               # Letter spacing in pixels
+    x: 100
+    y: 50
+    width: 1000
+    height: 250
+  block_position: "middle-center"
+  line_alignment: "center"
+  overflow: "shrink"
+  min_size: 24.0
+  line_height: 1.2
+  letter_spacing: 1
   line_breaking:
-    start_prohibited: ".)}]>!?、。，．！？)）］｝〉》」』ー～ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ々"  # Japanese line-start prohibited chars
-    end_prohibited: "({[<（［｛〈《「『"                                                            # Japanese line-end prohibited chars
+    start_prohibited: ".)}]>!?、。，．！？)）］｝〉》」』ー～ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ々"
+    end_prohibited: "({[<（［｛〈《「『"
 
 # Description text configuration
 description:
-  visible: false       # Whether to render description (default: false)
-  # content: null      # No default content template (uses article description)
-  font: ""             # Auto-detect system fonts
-  size: 32             # Font size in pixels
-  color: "#666666"     # Gray text
+  visible: false
+  # content: null
+  # font: null
+  size: 32
+  color: "#666666"
   area:
-    x: 100             # Text area X position
-    y: 350             # Text area Y position
-    width: 1000        # Text area width
-    height: 200        # Text area height
-  block_position: "top-left"      # Text block position in area
-  line_alignment: "left"          # Individual line alignment
-  overflow: "clip"                # Overflow handling
-  min_size: 16.0                  # Minimum font size when shrinking
-  line_height: 1.2                # Line height multiplier
-  letter_spacing: 0               # Letter spacing in pixels
+    x: 100
+    y: 350
+    width: 1000
+    height: 200
+  block_position: "top-left"
+  line_alignment: "left"
+  overflow: "clip"
+  min_size: 16.0
+  line_height: 1.2
+  letter_spacing: 0
   line_breaking:
-    start_prohibited: ".)}]>!?、。，．！？)）］｝〉》」』ー～ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ々"  # Japanese line-start prohibited chars
-    end_prohibited: "({[<（［｛〈《「『"                                                            # Japanese line-end prohibited chars
+    start_prohibited: ".)}]>!?、。，．！？)）］｝〉》」』ー～ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ々"
+    end_prohibited: "({[<（［｛〈《「『"
 
 # Overlay configuration
 overlay:
-  visible: false       # Whether to render overlay (default: false)
-  # image: null        # No overlay image by default
-  # placement:         # Placement configuration when overlay is used
-  #   x: 0
-  #   y: 0
-  #   width: 100
-  #   height: 100
-  # fit: "contain"     # Default fit method when overlay is configured
-  # opacity: 1.0       # Default opacity when overlay is configured
+  visible: false
+  # image: null
+  placement:
+    x: 50
+    y: 50
+  # width: null
+  # height: null
+  fit: "contain"
+  opacity: 1.0
 ```
 
 ### Configuration Options
@@ -106,26 +106,26 @@ overlay:
 #### Background Settings
 ```yaml
 background:
-  color: "#FFFFFF"           # Hex color (6 or 8 chars: #RRGGBB or #RRGGBBAA)
+  color: "#FFFFFF"           # Background color (hex format)
   image: "path/to/image.jpg" # Background image path (optional)
 ```
 
 #### Output Settings
 ```yaml
 output:
-  directory: "public"                    # Output directory
-  format: "png"                          # Image format (png, jpg)
-  filename: "custom-{{.Title}}.{{.Format}}" # Custom filename template (optional)
+  directory: "public"                       # Output directory
+  format: "png"                             # Image format (png, jpg)
+  filename: "custom-{{.Title}}.{{.Format}}" # Filename template (optional)
 ```
 
 #### Title Text Configuration
 ```yaml
 title:
-  visible: true                                # Whether to render title (default: true)
-  content: "{{.Title}}"  # Content template (optional)
-  font: "fonts/custom.ttf"                     # Font file path (empty = auto-detect)
+  visible: true                                # Show title text
+  content: "{{.Title}}"                        # Content template (optional, uses article title)
+  font: "fonts/custom.ttf"                     # Font file path (optional, auto-detects if omitted)
   size: 72                                     # Font size in pixels
-  color: "#000000"                             # Text color (hex)
+  color: "#000000"                             # Text color (hex format)
   area:                                        # Text rendering area
     x: 50                                      # X position
     y: 50                                      # Y position
@@ -133,37 +133,37 @@ title:
     height: 300                                # Area height
   block_position: "middle-center"              # Text block position
   line_alignment: "center"                     # Line alignment within block
-  overflow: "shrink"                           # Overflow handling
+  overflow: "shrink"                           # Overflow handling method
   min_size: 24.0                               # Minimum font size for shrink mode
   line_height: 1.2                             # Line height multiplier
   letter_spacing: 1                            # Letter spacing in pixels
   line_breaking:                               # Japanese line breaking rules
-    start_prohibited: "、。！？」』）"          # Chars that cannot start a line
-    end_prohibited: "「『（"                   # Chars that cannot end a line
+    start_prohibited: "、。！？」』）"           # Characters that cannot start a line
+    end_prohibited: "「『（"                    # Characters that cannot end a line
 ```
 
 #### Description Text Configuration
 ```yaml
 description:
-  visible: true                                # Whether to render description (default: true)
-  content: "{{.Description}}"                  # Content template (optional)
-  font: "fonts/description.ttf"               # Font file path (can be different from title)
+  visible: true                                # Show description text
+  content: "{{.Description}}"                  # Content template (optional, uses article description)
+  font: "fonts/description.ttf"                # Font file path (optional, can differ from title)
   size: 32                                     # Font size in pixels
-  color: "#666666"                             # Text color (hex)
+  color: "#666666"                             # Text color (hex format)
   area:                                        # Text rendering area
     x: 50                                      # X position
-    y: 380                                     # Y position (below title)
+    y: 380                                     # Y position
     width: 1200                                # Area width
     height: 200                                # Area height
-  block_position: "top-left"                  # Text block position
+  block_position: "top-left"                   # Text block position
   line_alignment: "left"                       # Line alignment within block
-  overflow: "shrink"                           # Overflow handling
+  overflow: "shrink"                           # Overflow handling method
   min_size: 16.0                               # Minimum font size for shrink mode
   line_height: 1.4                             # Line height multiplier
   letter_spacing: 0                            # Letter spacing in pixels
   line_breaking:                               # Japanese line breaking rules
-    start_prohibited: "、。！？」』）"          # Chars that cannot start a line
-    end_prohibited: "「『（"                   # Chars that cannot end a line
+    start_prohibited: "、。！？」』）"           # Characters that cannot start a line
+    end_prohibited: "「『（"                    # Characters that cannot end a line
 ```
 
 **Text Block Position Options:**
@@ -180,22 +180,32 @@ description:
 #### Overlay Configuration
 ```yaml
 overlay:
-  visible: true             # Whether to render overlay (default: false)
+  visible: true             # Show overlay image
   image: "overlay.png"      # Overlay image path
   placement:                # Image positioning
     x: 100                  # X position
     y: 100                  # Y position
-    width: 300              # Image width
-    height: 200             # Image height
+    width: 300              # Image width (optional, auto-detects if omitted)
+    height: 200             # Image height (optional, auto-detects if omitted)
   fit: "cover"              # Image fit method
   opacity: 0.8              # Image opacity (0.0-1.0)
 ```
 
-**Overlay Fit Options:**
-- `cover`: Scale image to cover area (may crop)
-- `contain`: Scale image to fit within area (preserves aspect ratio)
-- `fill`: Stretch image to fill exact dimensions
-- `none`: Use original image size
+**Placement Width/Height Behavior:**
+
+The final image size depends on both the `placement` dimensions and the `fit` option:
+
+**Step 1 - Dimension Calculation:**
+- **Both width/height specified**: Uses specified dimensions as target
+- **Width only**: Auto-calculates height maintaining aspect ratio
+- **Height only**: Auto-calculates width maintaining aspect ratio  
+- **Neither specified**: Uses original image dimensions
+
+**Step 2 - Fit Processing:**
+- **`cover`**: Scale to cover target area completely (may crop excess)
+- **`contain`**: Scale to fit within target area (preserves aspect ratio)
+- **`fill`**: Stretch to exact target dimensions (may distort)
+- **`none`**: No resizing, uses original dimensions
 
 ### Global Configuration
 
@@ -350,7 +360,7 @@ Content templates support Hugo-compatible functions:
 ### Asset Paths
 - **Config file**: Paths are relative to the config file directory
 - **Front matter**: Paths are relative to the article directory first, then fall back to config directory
-- **Font auto-detection**: When font path is empty, the system automatically detects Japanese fonts
+- **Font auto-detection**: When font path is omitted, the system automatically detects Japanese fonts
 
 ### Output Paths
 - **Default**: `{output.directory}/{article-path}/ogp.{format}`

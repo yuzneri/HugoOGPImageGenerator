@@ -166,12 +166,12 @@ func compositeCustomImage(dst *image.RGBA, basePath string, overlaySettings Over
 	if placement != nil {
 		x = placement.X
 		y = placement.Y
-		if placement.Width != 0 {
-			width = placement.Width
+		if placement.Width != nil {
+			width = *placement.Width
 			widthSpecified = true
 		}
-		if placement.Height != 0 {
-			height = placement.Height
+		if placement.Height != nil {
+			height = *placement.Height
 			heightSpecified = true
 		}
 	}

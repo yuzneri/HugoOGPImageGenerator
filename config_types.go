@@ -2,9 +2,9 @@ package main
 
 // OutputConfig represents output format and destination configuration.
 type OutputConfig struct {
-	Directory string  `yaml:"directory"`          // Output directory for generated images
-	Format    string  `yaml:"format"`             // Output image format (png, jpg)
-	Filename  *string `yaml:"filename,omitempty"` // Custom filename template (optional, default: "ogp.{format}")
+	Directory string `yaml:"directory"` // Output directory for generated images
+	Format    string `yaml:"format"`    // Output image format (png, jpg)
+	Filename  string `yaml:"filename"`  // Filename template (default: "ogp.{format}")
 }
 
 // BackgroundConfig represents background image and color configuration.
@@ -27,10 +27,10 @@ type LineBreakingOverride struct {
 
 // PlacementConfig represents positioning information for overlays.
 type PlacementConfig struct {
-	X      int `yaml:"x"`
-	Y      int `yaml:"y"`
-	Width  int `yaml:"width"`
-	Height int `yaml:"height"`
+	X      int  `yaml:"x"`
+	Y      int  `yaml:"y"`
+	Width  *int `yaml:"width,omitempty"`  // Optional: auto-detect from image if not specified
+	Height *int `yaml:"height,omitempty"` // Optional: auto-detect from image if not specified
 }
 
 // TextAreaConfig represents the text rendering area coordinates.

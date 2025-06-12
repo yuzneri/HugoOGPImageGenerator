@@ -75,8 +75,8 @@ func TestGenerateOutputFilename_Default(t *testing.T) {
 	config := getDefaultConfig()
 	config.Output.Format = "png"
 
-	// Test with nil filename (should use default)
-	config.Output.Filename = nil
+	// Test with empty filename (should use default)
+	config.Output.Filename = ""
 
 	fm := &FrontMatter{
 		Title:       "Test Article",
@@ -99,8 +99,7 @@ func TestGenerateOutputFilename_EmptyTemplate(t *testing.T) {
 	config.Output.Format = "jpg"
 
 	// Test with empty filename template (should use default)
-	emptyTemplate := ""
-	config.Output.Filename = &emptyTemplate
+	config.Output.Filename = ""
 
 	fm := &FrontMatter{
 		Title:       "Test Article",
@@ -123,8 +122,7 @@ func TestGenerateOutputFilename_SimpleTemplate(t *testing.T) {
 	config.Output.Format = "png"
 
 	// Test with simple template
-	template := "{{.Title}}.{{.Format}}"
-	config.Output.Filename = &template
+	config.Output.Filename = "{{.Title}}.{{.Format}}"
 
 	fm := &FrontMatter{
 		Title:       "My Test Article",
@@ -148,8 +146,7 @@ func TestGenerateOutputFilename_ComplexTemplate(t *testing.T) {
 	config.Output.Format = "jpg"
 
 	// Test with complex template including relpath
-	template := "{{.RelPath}}-{{.Title}}.{{.Format}}"
-	config.Output.Filename = &template
+	config.Output.Filename = "{{.RelPath}}-{{.Title}}.{{.Format}}"
 
 	fm := &FrontMatter{
 		Title:       "Test Article",
@@ -176,8 +173,7 @@ func TestGenerateOutputFilename_WithFields(t *testing.T) {
 	config.Output.Format = "png"
 
 	// Test template that uses Fields
-	template := "{{.Fields.category}}-{{.Title}}.{{.Format}}"
-	config.Output.Filename = &template
+	config.Output.Filename = "{{.Fields.category}}-{{.Title}}.{{.Format}}"
 
 	fm := &FrontMatter{
 		Title:       "Tech Article",

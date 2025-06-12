@@ -18,8 +18,8 @@ type TextConfig struct {
 	// Content configuration
 	Content *string `yaml:"content,omitempty"` // Default content template (optional)
 	// Font configuration
-	Font string  `yaml:"font"` // Path to font file
-	Size float64 `yaml:"size"` // Default font size
+	Font *string `yaml:"font,omitempty"` // Path to font file (optional, auto-detect if omitted)
+	Size float64 `yaml:"size"`           // Default font size
 	// Text color configuration (supports hex color codes)
 	Color string `yaml:"color"` // Hex color code (e.g., "#FF00FF", "#ff00ff80")
 	// Text rendering area coordinates
@@ -189,12 +189,13 @@ func setDefaultBackground(config *Config) {
 func setDefaultOutput(config *Config) {
 	config.Output.Directory = DefaultOutputDirectory
 	config.Output.Format = FormatPNG
+	config.Output.Filename = "ogp"
 }
 
 // setDefaultTitle configures default title settings
 func setDefaultTitle(config *Config) {
 	config.Title.Visible = true
-	config.Title.Font = ""
+	config.Title.Font = nil
 	config.Title.Size = DefaultTitleFontSize
 	config.Title.Color = DefaultTitleColor
 	config.Title.Area.X = DefaultTitleAreaX
@@ -214,7 +215,7 @@ func setDefaultTitle(config *Config) {
 // setDefaultDescription configures default description settings
 func setDefaultDescription(config *Config) {
 	config.Description.Visible = false
-	config.Description.Font = ""
+	config.Description.Font = nil
 	config.Description.Size = DefaultDescriptionFontSize
 	config.Description.Color = DefaultDescriptionColor
 	config.Description.Area.X = DefaultDescriptionAreaX

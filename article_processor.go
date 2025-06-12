@@ -195,7 +195,10 @@ func (ap *ArticleProcessor) setupImageCanvas(config *Config, articlePath string)
 	}
 
 	// Load font for title (prefer title font, fall back to global font)
-	titleFont := config.Title.Font
+	var titleFont string
+	if config.Title.Font != nil {
+		titleFont = *config.Title.Font
+	}
 	font, err := ap.fontManager.LoadFont(titleFont, articlePath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to load font: %w", err)
@@ -308,11 +311,7 @@ func (ap *ArticleProcessor) printUsedConfig(config *Config, title, description s
 	fmt.Println("\nOutput:")
 	fmt.Printf("  Format: %s\n", config.Output.Format)
 	fmt.Printf("  Directory: %s\n", config.Output.Directory)
-	if config.Output.Filename != nil {
-		fmt.Printf("  Filename Template: %s\n", *config.Output.Filename)
-	} else {
-		fmt.Printf("  Filename Template: ogp.%s\n", config.Output.Format)
-	}
+	fmt.Printf("  Filename Template: %s\n", config.Output.Filename)
 
 	// Background configuration
 	fmt.Println("\nBackground:")
@@ -333,7 +332,11 @@ func (ap *ArticleProcessor) printUsedConfig(config *Config, title, description s
 			fmt.Printf("  Text: %q\n", title)
 		}
 
-		fmt.Printf("  Font: %s\n", config.Title.Font)
+		if config.Title.Font != nil {
+			fmt.Printf("  Font: %s\n", *config.Title.Font)
+		} else {
+			fmt.Printf("  Font: (auto-detect)\n")
+		}
 		fmt.Printf("  Size: %.1f\n", config.Title.Size)
 		fmt.Printf("  Color: %s\n", config.Title.Color)
 		fmt.Printf("  Block Position: %s\n", config.Title.BlockPosition)
@@ -360,7 +363,11 @@ func (ap *ArticleProcessor) printUsedConfig(config *Config, title, description s
 		} else {
 			fmt.Printf("  Text: %q\n", description)
 		}
-		fmt.Printf("  Font: %s\n", config.Description.Font)
+		if config.Description.Font != nil {
+			fmt.Printf("  Font: %s\n", *config.Description.Font)
+		} else {
+			fmt.Printf("  Font: (auto-detect)\n")
+		}
 		fmt.Printf("  Size: %.1f\n", config.Description.Size)
 		fmt.Printf("  Color: %s\n", config.Description.Color)
 		fmt.Printf("  Block Position: %s\n", config.Description.BlockPosition)
@@ -387,16 +394,16 @@ func (ap *ArticleProcessor) printUsedConfig(config *Config, title, description s
 			fmt.Printf("    X: %d\n", config.Overlay.Placement.X)
 			fmt.Printf("    Y: %d\n", config.Overlay.Placement.Y)
 
-			if config.Overlay.Placement.Width != 0 {
-				fmt.Printf("    Width: %d\n", config.Overlay.Placement.Width)
+			if config.Overlay.Placement.Width != nil {
+				fmt.Printf("    Width: %d\n", *config.Overlay.Placement.Width)
 			} else {
-				fmt.Printf("    Width: (default)\n")
+				fmt.Printf("    Width: (auto-detect)\n")
 			}
 
-			if config.Overlay.Placement.Height != 0 {
-				fmt.Printf("    Height: %d\n", config.Overlay.Placement.Height)
+			if config.Overlay.Placement.Height != nil {
+				fmt.Printf("    Height: %d\n", *config.Overlay.Placement.Height)
 			} else {
-				fmt.Printf("    Height: (default)\n")
+				fmt.Printf("    Height: (auto-detect)\n")
 			}
 
 			fmt.Printf("  Fit: %s\n", config.Overlay.Fit)

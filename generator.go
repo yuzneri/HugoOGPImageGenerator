@@ -82,8 +82,8 @@ func sanitizeFilename(filename string) string {
 // appends file extensions based on the output format.
 func generateOutputFilename(config *Config, fm *FrontMatter, articlePath, contentDir string) (string, error) {
 	// Use template if configured
-	if config.Output.Filename != nil && *config.Output.Filename != "" {
-		templateStr := *config.Output.Filename
+	if config.Output.Filename != "" {
+		templateStr := config.Output.Filename
 
 		// Prepare template data
 		relPath, err := filepath.Rel(contentDir, articlePath)

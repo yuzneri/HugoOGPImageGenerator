@@ -24,10 +24,7 @@ func (cm *ConfigMerger) MergeConfigs(baseConfig *Config, ogpFM *OGPFrontMatter) 
 		newConfig.Background.Image = &imageCopy
 	}
 
-	if baseConfig.Output.Filename != nil {
-		filenameCopy := *baseConfig.Output.Filename
-		newConfig.Output.Filename = &filenameCopy
-	}
+	// Filename is now a value type, automatically copied
 
 	// Deep copy title content if it exists
 	if baseConfig.Title.Content != nil {
@@ -35,10 +32,22 @@ func (cm *ConfigMerger) MergeConfigs(baseConfig *Config, ogpFM *OGPFrontMatter) 
 		newConfig.Title.Content = &contentCopy
 	}
 
+	// Deep copy title font if it exists
+	if baseConfig.Title.Font != nil {
+		fontCopy := *baseConfig.Title.Font
+		newConfig.Title.Font = &fontCopy
+	}
+
 	// Deep copy description content if it exists
 	if baseConfig.Description.Content != nil {
 		contentCopy := *baseConfig.Description.Content
 		newConfig.Description.Content = &contentCopy
+	}
+
+	// Deep copy description font if it exists
+	if baseConfig.Description.Font != nil {
+		fontCopy := *baseConfig.Description.Font
+		newConfig.Description.Font = &fontCopy
 	}
 
 	// Deep copy overlay config (value type)
@@ -75,7 +84,7 @@ func (cm *ConfigMerger) MergeConfigs(baseConfig *Config, ogpFM *OGPFrontMatter) 
 func (cm *ConfigMerger) mergeTextConfigOverride(config *TextConfig, override *TextConfigOverride) {
 	cm.mergeBoolPtr(&config.Visible, override.Visible)
 	cm.mergeStringPtrValue(&config.Content, override.Content)
-	cm.mergeStringPtr(&config.Font, override.Font)
+	cm.mergeStringPtrValue(&config.Font, override.Font)
 	cm.mergeFloat64Ptr(&config.Size, override.Size)
 	cm.mergeStringPtr(&config.Color, override.Color)
 	cm.mergeStringPtr(&config.BlockPosition, override.BlockPosition)
@@ -125,7 +134,9 @@ func (cm *ConfigMerger) mergeOutputConfig(config *Config, ogpFM *OGPFrontMatter)
 	}
 
 	output := ogpFM.Output
-	cm.mergeStringPtrValue(&config.Output.Filename, output.Filename)
+	if output.Filename != nil {
+		config.Output.Filename = *output.Filename
+	}
 }
 
 func (cm *ConfigMerger) mergeOverlayConfig(config *Config, ogpFM *OGPFrontMatter) {
@@ -149,10 +160,10 @@ func (cm *ConfigMerger) mergeOverlayConfig(config *Config, ogpFM *OGPFrontMatter
 		if overlay.Placement.Y != 0 {
 			config.Overlay.Placement.Y = overlay.Placement.Y
 		}
-		if overlay.Placement.Width != 0 {
+		if overlay.Placement.Width != nil {
 			config.Overlay.Placement.Width = overlay.Placement.Width
 		}
-		if overlay.Placement.Height != 0 {
+		if overlay.Placement.Height != nil {
 			config.Overlay.Placement.Height = overlay.Placement.Height
 		}
 	}

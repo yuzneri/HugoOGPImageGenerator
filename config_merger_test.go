@@ -71,7 +71,8 @@ func TestConfigMerger_MergeConfigs_TitleOverrides(t *testing.T) {
 	baseConfig := &Config{}
 	baseConfig.Title.Size = 64.0
 	baseConfig.Title.Color = "#000000"
-	baseConfig.Title.Font = "base-font.ttf"
+	baseTitleFont := "base-font.ttf"
+	baseConfig.Title.Font = &baseTitleFont
 	baseConfig.Title.BlockPosition = "middle-center"
 	baseConfig.Title.LineAlignment = "left"
 	baseConfig.Title.Overflow = "shrink"
@@ -113,8 +114,8 @@ func TestConfigMerger_MergeConfigs_TitleOverrides(t *testing.T) {
 		t.Errorf("Expected title color %s, got %s", newColor, result.Title.Color)
 	}
 
-	if result.Title.Font != newFont {
-		t.Errorf("Expected title font %s, got %s", newFont, result.Title.Font)
+	if result.Title.Font == nil || *result.Title.Font != newFont {
+		t.Errorf("Expected title font %s, got %v", newFont, result.Title.Font)
 	}
 
 	if result.Title.BlockPosition != newAlignment {
@@ -149,7 +150,8 @@ func TestConfigMerger_MergeConfigs_DescriptionOverrides(t *testing.T) {
 	baseConfig.Description.Visible = true
 	baseConfig.Description.Size = 32.0
 	baseConfig.Description.Color = "#666666"
-	baseConfig.Description.Font = "base-font.ttf"
+	baseDescriptionFont := "base-font.ttf"
+	baseConfig.Description.Font = &baseDescriptionFont
 
 	// Create override values
 	newVisible := false
@@ -179,8 +181,8 @@ func TestConfigMerger_MergeConfigs_DescriptionOverrides(t *testing.T) {
 		t.Errorf("Expected description color %s, got %s", newColor, result.Description.Color)
 	}
 
-	if result.Description.Font != newFont {
-		t.Errorf("Expected description font %s, got %s", newFont, result.Description.Font)
+	if result.Description.Font == nil || *result.Description.Font != newFont {
+		t.Errorf("Expected description font %s, got %v", newFont, result.Description.Font)
 	}
 }
 
@@ -481,8 +483,8 @@ func TestConfigMerger_OutputConfiguration(t *testing.T) {
 	}
 
 	// Filename should be updated
-	if result.Output.Filename == nil || *result.Output.Filename != filename {
-		t.Errorf("Expected output filename %s, got %v", filename, result.Output.Filename)
+	if result.Output.Filename != filename {
+		t.Errorf("Expected output filename %s, got %s", filename, result.Output.Filename)
 	}
 }
 
@@ -528,7 +530,7 @@ func TestConfigMerger_PointerReferenceIsolation(t *testing.T) {
 	baseConfig := &Config{}
 	baseConfig.Title.Content = &originalTitleContent
 	baseConfig.Background.Image = &originalBgImage
-	baseConfig.Output.Filename = &originalFilename
+	baseConfig.Output.Filename = originalFilename
 	baseConfig.Overlay = MainOverlayConfig{
 		Visible: true,
 		Image:   &originalOverlayImage,
@@ -573,14 +575,12 @@ func TestConfigMerger_PointerReferenceIsolation(t *testing.T) {
 		result := merger.MergeConfigs(baseConfig, ogpFM)
 
 		// Modify merged config
-		if result.Output.Filename != nil {
-			*result.Output.Filename = "modified.png"
-		}
+		result.Output.Filename = "modified.png"
 
-		// Original should remain unchanged
-		if *baseConfig.Output.Filename != originalFilename {
+		// Original should remain unchanged (value type, so automatically isolated)
+		if baseConfig.Output.Filename != originalFilename {
 			t.Errorf("Base config output filename was modified: expected %s, got %s",
-				originalFilename, *baseConfig.Output.Filename)
+				originalFilename, baseConfig.Output.Filename)
 		}
 	})
 
@@ -666,8 +666,8 @@ func TestConfigMerger_DeepNestedPointerIsolation(t *testing.T) {
 		Placement: PlacementConfig{
 			X:      originalX,
 			Y:      originalY,
-			Width:  originalWidth,
-			Height: originalHeight,
+			Width:  &originalWidth,
+			Height: &originalHeight,
 		},
 	}
 
@@ -677,8 +677,10 @@ func TestConfigMerger_DeepNestedPointerIsolation(t *testing.T) {
 	// Modify result's placement values
 	result.Overlay.Placement.X = 50
 	result.Overlay.Placement.Y = 60
-	result.Overlay.Placement.Width = 300
-	result.Overlay.Placement.Height = 400
+	newWidth := 300
+	newHeight := 400
+	result.Overlay.Placement.Width = &newWidth
+	result.Overlay.Placement.Height = &newHeight
 
 	// Original should remain unchanged
 	if baseConfig.Overlay.Placement.X != originalX {
@@ -689,12 +691,12 @@ func TestConfigMerger_DeepNestedPointerIsolation(t *testing.T) {
 		t.Errorf("Base config placement Y was modified: expected %d, got %d",
 			originalY, baseConfig.Overlay.Placement.Y)
 	}
-	if baseConfig.Overlay.Placement.Width != originalWidth {
-		t.Errorf("Base config placement Width was modified: expected %d, got %d",
+	if baseConfig.Overlay.Placement.Width == nil || *baseConfig.Overlay.Placement.Width != originalWidth {
+		t.Errorf("Base config placement Width was modified: expected %d, got %v",
 			originalWidth, baseConfig.Overlay.Placement.Width)
 	}
-	if baseConfig.Overlay.Placement.Height != originalHeight {
-		t.Errorf("Base config placement Height was modified: expected %d, got %d",
+	if baseConfig.Overlay.Placement.Height == nil || *baseConfig.Overlay.Placement.Height != originalHeight {
+		t.Errorf("Base config placement Height was modified: expected %d, got %v",
 			originalHeight, baseConfig.Overlay.Placement.Height)
 	}
 }
@@ -910,7 +912,7 @@ func TestConfigMerger_ComplexNestedOverrides(t *testing.T) {
 			Opacity: &overrideOpacity,
 			Placement: &PlacementConfig{
 				X:     overrideX,
-				Width: overrideWidth,
+				Width: &overrideWidth,
 				// Y and Height not specified - should keep base values
 			},
 		},
@@ -928,8 +930,8 @@ func TestConfigMerger_ComplexNestedOverrides(t *testing.T) {
 	if result.Overlay.Placement.X != overrideX {
 		t.Errorf("Expected placement X %d, got %d", overrideX, result.Overlay.Placement.X)
 	}
-	if result.Overlay.Placement.Width != overrideWidth {
-		t.Errorf("Expected placement width %d, got %d", overrideWidth, result.Overlay.Placement.Width)
+	if result.Overlay.Placement.Width == nil || *result.Overlay.Placement.Width != overrideWidth {
+		t.Errorf("Expected placement width %d, got %v", overrideWidth, result.Overlay.Placement.Width)
 	}
 
 	// Check preserved values (should maintain base values for non-overridden fields)
