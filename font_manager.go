@@ -1,11 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"runtime"
 	"strings"
 
 	"github.com/golang/freetype/truetype"
-	"golang.org/x/image/font/gofont/goregular"
 )
 
 // FontManager handles font loading with caching for improved performance.
@@ -60,7 +61,7 @@ func (fm *FontManager) resolveFontPath(fontPath string, articlePath string) stri
 	return fm.pathResolver.ResolveAssetPath(fontPath, articlePath)
 }
 
-// getDefaultFont returns the embedded default font with caching.
+// getDefaultFont returns a system font with caching.
 func (fm *FontManager) getDefaultFont() (*truetype.Font, error) {
 	const defaultFontKey = DefaultFontCacheKey
 
@@ -68,13 +69,101 @@ func (fm *FontManager) getDefaultFont() (*truetype.Font, error) {
 		return font, nil
 	}
 
-	font, err := truetype.Parse(goregular.TTF)
+	fontPath := fm.findSystemFont()
+	if fontPath == "" {
+		return nil, fmt.Errorf("no suitable system font found")
+	}
+
+	fontBytes, err := os.ReadFile(fontPath)
 	if err != nil {
-		return nil, NewFontError("parse", "embedded default font", err)
+		return nil, NewFileError("read", fontPath, err)
+	}
+
+	font, err := truetype.Parse(fontBytes)
+	if err != nil {
+		return nil, NewFontError("parse", fontPath, err)
 	}
 
 	fm.cache[defaultFontKey] = font
 	return font, nil
+}
+
+// findSystemFont tries to find a suitable system font by checking common paths.
+func (fm *FontManager) findSystemFont() string {
+	// OS-specific font paths in priority order
+	var fontPaths []string
+
+	switch runtime.GOOS {
+	case "darwin": // macOS
+		fontPaths = []string{
+			// Japanese fonts first
+			"/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc",
+			"/System/Library/Fonts/Hiragino Sans GB W3.otf",
+			"/Library/Fonts/Osaka.ttf",
+			"/System/Library/Fonts/AppleGothic.ttf",
+			// Fallback to standard fonts
+			"/System/Library/Fonts/Helvetica.ttc",
+			"/System/Library/Fonts/Arial.ttf",
+		}
+	case "linux":
+		fontPaths = []string{
+			// Japanese fonts first
+			"/usr/share/fonts/truetype/fonts-japanese-gothic.ttf",
+			"/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+			"/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.otf",
+			"/usr/share/fonts/truetype/takao-gothic/TakaoGothic.ttf",
+			// Fallback to standard fonts
+			"/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf",
+			"/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+			"/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+		}
+	case "windows":
+		fontPaths = []string{
+			// Japanese fonts first
+			"C:\\Windows\\Fonts\\meiryo.ttc",
+			"C:\\Windows\\Fonts\\YuGothM.ttc",
+			"C:\\Windows\\Fonts\\msgothic.ttc",
+			"C:\\Windows\\Fonts\\msmincho.ttc",
+			// Fallback to standard fonts
+			"C:\\Windows\\Fonts\\arial.ttf",
+			"C:\\Windows\\Fonts\\calibri.ttf",
+			"C:\\Windows\\Fonts\\tahoma.ttf",
+		}
+	default:
+		// Try common paths for unknown OS (Japanese fonts first)
+		fontPaths = []string{
+			"/usr/share/fonts/truetype/fonts-japanese-gothic.ttf",
+			"C:\\Windows\\Fonts\\msgothic.ttc",
+			"/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc",
+			"/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf",
+			"/System/Library/Fonts/Helvetica.ttc",
+			"C:\\Windows\\Fonts\\arial.ttf",
+		}
+	}
+
+	// Check each path until we find a valid font
+	for _, fontPath := range fontPaths {
+		if fm.isValidFont(fontPath) {
+			return fontPath
+		}
+	}
+
+	return ""
+}
+
+// isValidFont checks if a font file exists and is readable.
+func (fm *FontManager) isValidFont(fontPath string) bool {
+	if fontPath == "" {
+		return false
+	}
+
+	info, err := os.Stat(fontPath)
+	if err != nil {
+		return false
+	}
+
+	// Basic file size check (fonts should be reasonable size)
+	return info.Size() > 1024
 }
 
 // LoadFontWithFallback loads a font with fallback to a default font on error.

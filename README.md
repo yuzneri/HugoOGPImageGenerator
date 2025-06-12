@@ -3,12 +3,6 @@
 A Go application that automatically generates Open Graph Protocol (OGP) images for Hugo static sites.
 It processes Hugo content with front matter and creates custom social media preview images with advanced text rendering, background processing, and overlay composition.
 
-## Installation
-
-```bash
-go build -o ogp
-```
-
 ## Usage
 
 ### Generate OGP for all articles
