@@ -105,9 +105,9 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: ogp-${{ matrix.goos }}-${{ matrix.goarch }}
+        name: ogp-${{ matrix.goos }}${{ steps.version.outputs.version }}-${{ matrix.goarch }}
         path: |
-          ogp-${{ matrix.goos }}-${{ matrix.goarch }}*
+          ogp-${{ matrix.goos }}${{ steps.version.outputs.version }}-${{ matrix.goarch }}*
         retention-days: 1
 
   release:
