@@ -1,4 +1,4 @@
-module github.com/your-username/ogp-generator
+module github.com/yuzneri/ogp-generator
 
 go 1.18
 
