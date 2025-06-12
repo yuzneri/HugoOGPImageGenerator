@@ -82,11 +82,8 @@ jobs:
     - name: Generate version
       id: version
       run: |
-        VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "v0.1.0")
-        if [[ $VERSION != v* ]]; then
-          COMMIT_COUNT=$(git rev-list --count HEAD)
-          VERSION="v0.1.${COMMIT_COUNT}"
-        fi
+        COMMIT_COUNT=$(git rev-list --count HEAD)
+        VERSION="v${COMMIT_COUNT}"
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "Version: $VERSION"
 
@@ -96,7 +93,7 @@ jobs:
         GOARCH: ${{ matrix.goarch }}
         CGO_ENABLED: 0
       run: |
-        BINARY_NAME="ogp-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }}"
+        BINARY_NAME="ogp-${{ matrix.goos }}${{ steps.version.outputs.version }}-${{ matrix.goarch }}${{ matrix.suffix }}"
         go build -ldflags="-s -w -X main.version=${{ steps.version.outputs.version }}" -o "$BINARY_NAME" .
         
         if [ "${{ matrix.goos }}" = "windows" ]; then
@@ -126,11 +123,8 @@ jobs:
     - name: Generate version and changelog
       id: version
       run: |
-        VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "v0.1.0")
-        if [[ $VERSION != v* ]]; then
-          COMMIT_COUNT=$(git rev-list --count HEAD)
-          VERSION="v0.1.${COMMIT_COUNT}"
-        fi
+        COMMIT_COUNT=$(git rev-list --count HEAD)
+        VERSION="v${COMMIT_COUNT}"
         echo "version=$VERSION" >> $GITHUB_OUTPUT
 
     - name: Download all artifacts
