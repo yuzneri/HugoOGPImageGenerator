@@ -115,34 +115,36 @@ func compositeImage(dst *image.RGBA, src image.Image, x, y int, opacity float64)
 	}
 }
 
+// OverlaySettings defines the interface for overlay configuration
+type OverlaySettings interface {
+	GetImage() *string
+	GetPlacement() *PlacementConfig
+	GetFit() *string
+	GetOpacity() *float64
+}
+
 // compositeCustomImage composites an overlay image with full configuration support.
 // It handles path resolution, resizing, cropping (for cover fit), and alpha blending.
 // The isConfigOverlay parameter determines whether to use config-relative or article-relative paths.
-func compositeCustomImage(dst *image.RGBA, basePath string, overlaySettings *struct {
-	Image     *string `yaml:"image,omitempty"`
-	Placement *struct {
-		X      *int `yaml:"x,omitempty"`
-		Y      *int `yaml:"y,omitempty"`
-		Width  *int `yaml:"width,omitempty"`
-		Height *int `yaml:"height,omitempty"`
-	} `yaml:"placement,omitempty"`
-	Fit     *string  `yaml:"fit,omitempty"`
-	Opacity *float64 `yaml:"opacity,omitempty"`
-}, isConfigOverlay bool, configDir string) error {
+func compositeCustomImage(dst *image.RGBA, basePath string, overlaySettings OverlaySettings, isConfigOverlay bool, configDir string) error {
 	var imagePath string
+	imagePtr := overlaySettings.GetImage()
+	if imagePtr == nil {
+		return fmt.Errorf("overlay image is nil")
+	}
 	if isConfigOverlay {
 		// For config overlays, use the same path resolution as fonts/background images
-		imagePath = resolveAssetPath(*overlaySettings.Image, configDir)
+		imagePath = resolveAssetPath(*imagePtr, configDir)
 	} else {
 		// For front matter overlays, try article directory first, then config directory
-		if filepath.IsAbs(*overlaySettings.Image) {
-			imagePath = *overlaySettings.Image
+		if filepath.IsAbs(*imagePtr) {
+			imagePath = *imagePtr
 		} else {
-			articleImagePath := filepath.Join(basePath, *overlaySettings.Image)
+			articleImagePath := filepath.Join(basePath, *imagePtr)
 			if _, err := os.Stat(articleImagePath); err == nil {
 				imagePath = articleImagePath
 			} else {
-				imagePath = resolveAssetPath(*overlaySettings.Image, configDir)
+				imagePath = resolveAssetPath(*imagePtr, configDir)
 			}
 		}
 	}
@@ -160,19 +162,16 @@ func compositeCustomImage(dst *image.RGBA, basePath string, overlaySettings *str
 	opacity := 1.0
 
 	var widthSpecified, heightSpecified bool
-	if overlaySettings.Placement != nil {
-		if overlaySettings.Placement.X != nil {
-			x = *overlaySettings.Placement.X
-		}
-		if overlaySettings.Placement.Y != nil {
-			y = *overlaySettings.Placement.Y
-		}
-		if overlaySettings.Placement.Width != nil {
-			width = *overlaySettings.Placement.Width
+	placement := overlaySettings.GetPlacement()
+	if placement != nil {
+		x = placement.X
+		y = placement.Y
+		if placement.Width != 0 {
+			width = placement.Width
 			widthSpecified = true
 		}
-		if overlaySettings.Placement.Height != nil {
-			height = *overlaySettings.Placement.Height
+		if placement.Height != 0 {
+			height = placement.Height
 			heightSpecified = true
 		}
 	}
@@ -185,12 +184,12 @@ func compositeCustomImage(dst *image.RGBA, basePath string, overlaySettings *str
 		width = int(float64(height) * aspectRatio)
 	}
 
-	if overlaySettings.Fit != nil {
-		fit = *overlaySettings.Fit
+	if overlaySettings.GetFit() != nil {
+		fit = *overlaySettings.GetFit()
 	}
 
-	if overlaySettings.Opacity != nil {
-		opacity = *overlaySettings.Opacity
+	if overlaySettings.GetOpacity() != nil {
+		opacity = *overlaySettings.GetOpacity()
 		if opacity < 0 {
 			opacity = 0
 		}

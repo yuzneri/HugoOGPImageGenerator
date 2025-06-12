@@ -1,13 +1,11 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
-	tmpl "text/template"
 )
 
 // OGPGenerator is the main orchestrator for OGP image generation.
@@ -35,10 +33,7 @@ func NewOGPGenerator(configPath, contentDir, projectRoot string) (*OGPGenerator,
 
 	fontManager := NewFontManager(configDir)
 	bgProcessor := NewBackgroundProcessor(configDir)
-
-	startProhibited, endProhibited := buildProhibitedMaps(config)
-	textProcessor := NewTextProcessor(startProhibited, endProhibited, config.Text.LetterSpacing)
-	imageRenderer := NewImageRenderer(textProcessor)
+	imageRenderer := NewImageRenderer()
 
 	articleProcessor := NewArticleProcessor(config, contentDir, configDir, fontManager, bgProcessor, imageRenderer)
 
@@ -73,7 +68,7 @@ func sanitizeFilename(filename string) string {
 	filename = strings.ReplaceAll(filename, "..", "")
 
 	// Replace potentially problematic characters with safe alternatives
-	re := regexp.MustCompile(`[<>:"|?*\\]`)
+	re := regexp.MustCompile(`[<>:"|?*\\/]`)
 	filename = re.ReplaceAllString(filename, "_")
 
 	// Remove leading/trailing whitespace and dots
@@ -118,32 +113,11 @@ func generateOutputFilename(config *Config, fm *FrontMatter, articlePath, conten
 		data.Fields["url"] = fm.URL
 		data.Fields["tags"] = fm.Tags
 
-		// Parse and execute template
-		t, err := tmpl.New("filename").Parse(templateStr)
+		// Use template processor to generate filename
+		templateProcessor := NewTemplateProcessor()
+		filename, err := templateProcessor.ProcessFilenameTemplate(templateStr, data)
 		if err != nil {
-			return "", fmt.Errorf("failed to parse filename template: %w", err)
-		}
-
-		var buf bytes.Buffer
-		err = t.Execute(&buf, data)
-		if err != nil {
-			return "", fmt.Errorf("failed to execute filename template: %w", err)
-		}
-
-		filename := buf.String()
-
-		// Sanitize the result
-		filename = sanitizeFilename(filename)
-
-		// Ensure we have a valid filename
-		if filename == "" {
-			return "ogp." + config.Output.Format, nil
-		}
-
-		// Auto-append extension if not present
-		expectedExt := "." + config.Output.Format
-		if !strings.HasSuffix(strings.ToLower(filename), strings.ToLower(expectedExt)) {
-			filename = filename + expectedExt
+			return "", err
 		}
 
 		return filename, nil
@@ -167,9 +141,9 @@ func (g *OGPGenerator) GenerateSingle(articlePath string) error {
 		return fmt.Errorf("article directory not found: %s", fullArticlePath)
 	}
 
-	indexPath := filepath.Join(fullArticlePath, "index.md")
+	indexPath := filepath.Join(fullArticlePath, DefaultIndexFilename)
 	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
-		return fmt.Errorf("index.md not found in: %s", fullArticlePath)
+		return fmt.Errorf("%s not found in: %s", DefaultIndexFilename, fullArticlePath)
 	}
 
 	fmt.Printf("Generating OGP image for: %s\n", articlePath)
@@ -186,9 +160,9 @@ func (g *OGPGenerator) GenerateTest(articlePath string) error {
 		return fmt.Errorf("article directory not found: %s", fullArticlePath)
 	}
 
-	indexPath := filepath.Join(fullArticlePath, "index.md")
+	indexPath := filepath.Join(fullArticlePath, DefaultIndexFilename)
 	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
-		return fmt.Errorf("index.md not found in: %s", fullArticlePath)
+		return fmt.Errorf("%s not found in: %s", DefaultIndexFilename, fullArticlePath)
 	}
 
 	fmt.Printf("Testing OGP image for: %s\n", articlePath)
@@ -203,7 +177,7 @@ func (g *OGPGenerator) GenerateAll() error {
 			return err
 		}
 
-		if d.Name() == "index.md" {
+		if d.Name() == DefaultIndexFilename {
 			articleDir := filepath.Dir(path)
 			return g.articleProcessor.ProcessArticle(articleDir, ProcessOptions{TestMode: false})
 		}

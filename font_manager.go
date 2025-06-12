@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
@@ -10,10 +9,14 @@ import (
 )
 
 // FontManager handles font loading with caching for improved performance.
+// It implements the FontLoader interface.
 type FontManager struct {
 	cache        map[string]*truetype.Font
-	pathResolver *PathResolver
+	pathResolver AssetPathResolver
 }
+
+// Verify that FontManager implements FontLoader interface
+var _ FontLoader = (*FontManager)(nil)
 
 // NewFontManager creates a new FontManager with an empty cache.
 func NewFontManager(configDir string) *FontManager {
@@ -40,12 +43,12 @@ func (fm *FontManager) LoadFont(fontPath string, articlePath string) (*truetype.
 
 	fontBytes, err := os.ReadFile(resolvedPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read font file %s: %w", resolvedPath, err)
+		return nil, NewFileError("read", resolvedPath, err)
 	}
 
 	font, err := truetype.Parse(fontBytes)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse font: %w", err)
+		return nil, NewFontError("parse", resolvedPath, err)
 	}
 
 	fm.cache[resolvedPath] = font
@@ -59,7 +62,7 @@ func (fm *FontManager) resolveFontPath(fontPath string, articlePath string) stri
 
 // getDefaultFont returns the embedded default font with caching.
 func (fm *FontManager) getDefaultFont() (*truetype.Font, error) {
-	const defaultFontKey = "__default_embedded_font__"
+	const defaultFontKey = DefaultFontCacheKey
 
 	if font, exists := fm.cache[defaultFontKey]; exists {
 		return font, nil
@@ -67,7 +70,7 @@ func (fm *FontManager) getDefaultFont() (*truetype.Font, error) {
 
 	font, err := truetype.Parse(goregular.TTF)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse embedded default font: %w", err)
+		return nil, NewFontError("parse", "embedded default font", err)
 	}
 
 	fm.cache[defaultFontKey] = font

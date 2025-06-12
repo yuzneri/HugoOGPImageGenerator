@@ -68,75 +68,15 @@ func (t *TextProcessor) splitTextSingle(text string, face font.Face, maxWidth in
 	for i < len(runes) {
 		r := runes[i]
 		testLine := append(currentLine, r)
-		testLineStr := string(testLine)
 
-		// Measure text width using font metrics with letter spacing
-		textWidthPx := measureStringWithSpacing(face, testLineStr, t.letterSpacing)
-
-		if textWidthPx <= maxWidth {
-			// Character fits within the line width
+		if t.fitsInWidth(testLine, face, maxWidth) {
 			currentLine = testLine
 			i++
 		} else {
-			// Character would exceed line width, apply breaking rules
-			if t.startProhibited[r] {
-				// 行頭禁則文字: Force character to stay on current line
-				currentLine = testLine
-				i++
-
-				// Include any consecutive prohibited characters
-				for i < len(runes) && t.startProhibited[runes[i]] {
-					currentLine = append(currentLine, runes[i])
-					i++
-				}
-
-				// Finalize the current line
-				if len(currentLine) > 0 {
-					lines = append(lines, string(currentLine))
-					currentLine = []rune{}
-				}
-			} else if len(currentLine) > 0 && t.endProhibited[currentLine[len(currentLine)-1]] {
-				// 行末禁則文字: Move prohibited character to next line
-				if len(currentLine) > 1 {
-					// Move the prohibited character to the next line
-					endChar := currentLine[len(currentLine)-1]
-					lines = append(lines, string(currentLine[:len(currentLine)-1]))
-					currentLine = []rune{endChar, r}
-				} else {
-					// Only the prohibited character on this line, break anyway
-					lines = append(lines, string(currentLine))
-					currentLine = []rune{r}
-				}
-				i++
-			} else {
-				// Handle English word boundaries
-				if len(currentLine) > 0 && isWordChar(r) {
-					// Find word boundary to avoid breaking words mid-way
-					boundaryPos := findWordBoundary(currentLine, len(currentLine)-1)
-
-					if boundaryPos >= 0 && boundaryPos < len(currentLine)-1 {
-						// Break at word boundary
-						lines = append(lines, string(currentLine[:boundaryPos+1]))
-						currentLine = append([]rune{}, currentLine[boundaryPos+1:]...)
-						currentLine = append(currentLine, r)
-						i++
-					} else {
-						// No good word boundary found, break normally
-						if len(currentLine) > 0 {
-							lines = append(lines, string(currentLine))
-						}
-						currentLine = []rune{r}
-						i++
-					}
-				} else {
-					// Normal character break
-					if len(currentLine) > 0 {
-						lines = append(lines, string(currentLine))
-					}
-					currentLine = []rune{r}
-					i++
-				}
-			}
+			newLines, newCurrentLine, newIndex := t.handleLineBreak(lines, currentLine, runes, i, r)
+			lines = newLines
+			currentLine = newCurrentLine
+			i = newIndex
 		}
 	}
 
@@ -146,6 +86,94 @@ func (t *TextProcessor) splitTextSingle(text string, face font.Face, maxWidth in
 	}
 
 	return lines
+}
+
+// fitsInWidth checks if the test line fits within the maximum width.
+func (t *TextProcessor) fitsInWidth(testLine []rune, face font.Face, maxWidth int) bool {
+	testLineStr := string(testLine)
+	textWidthPx := measureStringWithSpacing(face, testLineStr, t.letterSpacing)
+	return textWidthPx <= maxWidth
+}
+
+// handleLineBreak applies line breaking rules when a character exceeds the width.
+func (t *TextProcessor) handleLineBreak(lines []string, currentLine []rune, runes []rune, i int, r rune) ([]string, []rune, int) {
+	if t.startProhibited[r] {
+		return t.handleStartProhibited(lines, currentLine, runes, i, r)
+	} else if len(currentLine) > 0 && t.endProhibited[currentLine[len(currentLine)-1]] {
+		newLines, newCurrentLine := t.handleEndProhibited(lines, currentLine, r)
+		return newLines, newCurrentLine, i + 1
+	} else {
+		newLines, newCurrentLine := t.handleWordBoundary(lines, currentLine, r)
+		return newLines, newCurrentLine, i + 1
+	}
+}
+
+// handleStartProhibited handles characters that cannot start a line.
+func (t *TextProcessor) handleStartProhibited(lines []string, currentLine []rune, runes []rune, i int, r rune) ([]string, []rune, int) {
+	// 行頭禁則文字: Force character to stay on current line
+	currentLine = append(currentLine, r)
+	i++
+
+	// Include any consecutive prohibited characters
+	for i < len(runes) && t.startProhibited[runes[i]] {
+		currentLine = append(currentLine, runes[i])
+		i++
+	}
+
+	// Finalize the current line
+	if len(currentLine) > 0 {
+		lines = append(lines, string(currentLine))
+		currentLine = []rune{}
+	}
+
+	return lines, currentLine, i
+}
+
+// handleEndProhibited handles characters that cannot end a line.
+func (t *TextProcessor) handleEndProhibited(lines []string, currentLine []rune, r rune) ([]string, []rune) {
+	// 行末禁則文字: Move prohibited character to next line
+	if len(currentLine) > 1 {
+		// Move the prohibited character to the next line
+		endChar := currentLine[len(currentLine)-1]
+		lines = append(lines, string(currentLine[:len(currentLine)-1]))
+		currentLine = []rune{endChar, r}
+	} else {
+		// Only the prohibited character on this line, break anyway
+		lines = append(lines, string(currentLine))
+		currentLine = []rune{r}
+	}
+
+	return lines, currentLine
+}
+
+// handleWordBoundary handles word boundary breaking for English text.
+func (t *TextProcessor) handleWordBoundary(lines []string, currentLine []rune, r rune) ([]string, []rune) {
+	// Handle English word boundaries
+	if len(currentLine) > 0 && isWordChar(r) {
+		// Find word boundary to avoid breaking words mid-way
+		boundaryPos := findWordBoundary(currentLine, len(currentLine)-1)
+
+		if boundaryPos >= 0 && boundaryPos < len(currentLine)-1 {
+			// Break at word boundary
+			lines = append(lines, string(currentLine[:boundaryPos+1]))
+			currentLine = append([]rune{}, currentLine[boundaryPos+1:]...)
+			currentLine = append(currentLine, r)
+		} else {
+			// No good word boundary found, break normally
+			if len(currentLine) > 0 {
+				lines = append(lines, string(currentLine))
+			}
+			currentLine = []rune{r}
+		}
+	} else {
+		// Normal character break
+		if len(currentLine) > 0 {
+			lines = append(lines, string(currentLine))
+		}
+		currentLine = []rune{r}
+	}
+
+	return lines, currentLine
 }
 
 // isWordChar determines if a character is part of an English word.

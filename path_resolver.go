@@ -6,9 +6,13 @@ import (
 )
 
 // PathResolver handles path resolution for assets relative to config and article directories.
+// It implements the AssetPathResolver interface.
 type PathResolver struct {
 	configDir string
 }
+
+// Verify that PathResolver implements AssetPathResolver interface
+var _ AssetPathResolver = (*PathResolver)(nil)
 
 // NewPathResolver creates a new PathResolver with the given config directory.
 func NewPathResolver(configDir string) *PathResolver {

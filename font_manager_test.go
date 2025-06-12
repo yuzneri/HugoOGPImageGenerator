@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -108,6 +109,23 @@ func TestFontManager_LoadFont_FileNotFound(t *testing.T) {
 	if font != nil {
 		t.Error("LoadFont should return nil font on error")
 	}
+
+	// Check that the error is the correct type
+	if !IsFileError(err) {
+		t.Errorf("Expected FileError, got %T", err)
+	}
+
+	var appErr *AppError
+	if errors.As(err, &appErr) {
+		if appErr.Type != FileError {
+			t.Errorf("Expected FileError type, got %v", appErr.Type)
+		}
+		if appErr.Context["operation"] != "read" {
+			t.Errorf("Expected operation context 'read', got %v", appErr.Context["operation"])
+		}
+	} else {
+		t.Error("Expected error to be AppError")
+	}
 }
 
 func TestFontManager_LoadFont_InvalidFont(t *testing.T) {
@@ -135,6 +153,19 @@ func TestFontManager_LoadFont_InvalidFont(t *testing.T) {
 
 	if font != nil {
 		t.Error("LoadFont should return nil font for invalid file")
+	}
+
+	// Check that the error is a FontError
+	var appErr *AppError
+	if errors.As(err, &appErr) {
+		if appErr.Type != FontError {
+			t.Errorf("Expected FontError type, got %v", appErr.Type)
+		}
+		if appErr.Context["operation"] != "parse" {
+			t.Errorf("Expected operation context 'parse', got %v", appErr.Context["operation"])
+		}
+	} else {
+		t.Error("Expected error to be AppError")
 	}
 }
 

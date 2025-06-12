@@ -27,10 +27,11 @@ func main() {
 
 	var contentDir string
 	if cli.Mode == "--test" {
-		// testモードではcontentディレクトリは不要（記事パスを直接指定）
-		contentDir = ""
+		// testモードでは記事パスから contentDir を推測
+		cwd, _ := os.Getwd()
+		contentDir = filepath.Join(cwd, "test_content")
 	} else {
-		contentDir = filepath.Join(cli.ProjectRoot, "content")
+		contentDir = filepath.Join(cli.ProjectRoot, ContentDirectory)
 	}
 
 	if cli.Mode == "--list" {

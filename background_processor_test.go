@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"image"
 	"image/color"
 	"image/png"
@@ -242,6 +243,23 @@ func TestBackgroundProcessor_loadBackgroundImage_FileNotFound(t *testing.T) {
 	if img != nil {
 		t.Error("loadBackgroundImage() should return nil image on error")
 	}
+
+	// Check that the error is the correct type
+	if !IsFileError(err) {
+		t.Errorf("Expected FileError, got %T", err)
+	}
+
+	var appErr *AppError
+	if errors.As(err, &appErr) {
+		if appErr.Type != FileError {
+			t.Errorf("Expected FileError type, got %v", appErr.Type)
+		}
+		if appErr.Context["operation"] != "open" {
+			t.Errorf("Expected operation context 'open', got %v", appErr.Context["operation"])
+		}
+	} else {
+		t.Error("Expected error to be AppError")
+	}
 }
 
 func TestBackgroundProcessor_CreateBackground_EmptyImagePath(t *testing.T) {
@@ -269,5 +287,46 @@ func TestBackgroundProcessor_CreateBackground_EmptyImagePath(t *testing.T) {
 		if pixel != expected {
 			t.Errorf("Expected green pixel %+v, got %+v", expected, pixel)
 		}
+	}
+}
+
+func TestBackgroundProcessor_loadBackgroundImage_InvalidImage(t *testing.T) {
+	// Create a temporary directory and invalid image file
+	tempDir, err := os.MkdirTemp("", "bg_test")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Create an invalid image file (just text)
+	invalidImagePath := filepath.Join(tempDir, "invalid.png")
+	err = os.WriteFile(invalidImagePath, []byte("This is not an image file"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create invalid image file: %v", err)
+	}
+
+	processor := NewBackgroundProcessor(tempDir)
+
+	img, err := processor.loadBackgroundImage("invalid.png", tempDir)
+
+	if err == nil {
+		t.Error("loadBackgroundImage() should return error for invalid image file")
+	}
+
+	if img != nil {
+		t.Error("loadBackgroundImage() should return nil image for invalid file")
+	}
+
+	// Check that the error is an ImageError
+	var appErr *AppError
+	if errors.As(err, &appErr) {
+		if appErr.Type != ImageError {
+			t.Errorf("Expected ImageError type, got %v", appErr.Type)
+		}
+		if appErr.Context["operation"] != "decode" {
+			t.Errorf("Expected operation context 'decode', got %v", appErr.Context["operation"])
+		}
+	} else {
+		t.Error("Expected error to be AppError")
 	}
 }

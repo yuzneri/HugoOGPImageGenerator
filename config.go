@@ -10,58 +10,90 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// TextConfig represents configuration for a single text element (title or description).
+// It contains all settings for fonts, text rendering, and line breaking for that text.
+type TextConfig struct {
+	// Rendering control
+	Visible bool `yaml:"visible"` // Whether to render this text element (default: true)
+	// Content configuration
+	Content *string `yaml:"content,omitempty"` // Default content template (optional)
+	// Font configuration
+	Font string  `yaml:"font"` // Path to font file
+	Size float64 `yaml:"size"` // Default font size
+	// Text color configuration (supports hex color codes)
+	Color string `yaml:"color"` // Hex color code (e.g., "#FF00FF", "#ff00ff80")
+	// Text rendering area coordinates
+	Area          TextArea `yaml:"area"`
+	BlockPosition string   `yaml:"block_position"` // Text block position in area (e.g., "middle-center")
+	LineAlignment string   `yaml:"line_alignment"` // Individual line alignment within block ("left", "center", "right")
+	Overflow      string   `yaml:"overflow"`       // Overflow handling ("shrink" or "clip")
+	MinSize       float64  `yaml:"min_size"`       // Minimum font size for shrink mode
+	LineHeight    float64  `yaml:"line_height"`    // Line height multiplier
+	LetterSpacing int      `yaml:"letter_spacing"` // Letter spacing in pixels
+	// Japanese line breaking rules configuration
+	LineBreaking LineBreakingConfig `yaml:"line_breaking"`
+}
+
+// Legacy type aliases for backwards compatibility
+type PlacementInfo = PlacementConfig
+type ConfigOverlay = MainOverlayConfig
+type FrontMatterOverlay = ArticleOverlayConfig
+
+// GetImage implements OverlaySettings interface
+func (c MainOverlayConfig) GetImage() *string {
+	return c.Image
+}
+
+// GetPlacement implements OverlaySettings interface
+func (c MainOverlayConfig) GetPlacement() *PlacementConfig {
+	return &c.Placement
+}
+
+// GetFit implements OverlaySettings interface
+func (c MainOverlayConfig) GetFit() *string {
+	return &c.Fit
+}
+
+// GetOpacity implements OverlaySettings interface
+func (c MainOverlayConfig) GetOpacity() *float64 {
+	return &c.Opacity
+}
+
+// GetImage implements OverlaySettings interface
+func (f *ArticleOverlayConfig) GetImage() *string {
+	return f.Image
+}
+
+// GetPlacement implements OverlaySettings interface
+func (f *ArticleOverlayConfig) GetPlacement() *PlacementConfig {
+	return f.Placement
+}
+
+// GetFit implements OverlaySettings interface
+func (f *ArticleOverlayConfig) GetFit() *string {
+	return f.Fit
+}
+
+// GetOpacity implements OverlaySettings interface
+func (f *ArticleOverlayConfig) GetOpacity() *float64 {
+	return f.Opacity
+}
+
 // Config represents the main configuration structure for OGP image generation.
 // It contains all settings for fonts, text rendering, image processing, and line breaking.
 type Config struct {
 	// Background configuration
-	Background struct {
-		Image *string `yaml:"image,omitempty"` // Path to background image (optional)
-		Color string  `yaml:"color"`           // Background color (hex) when image is not specified
-	} `yaml:"background"`
+	Background BackgroundConfig `yaml:"background"`
 
 	// Output configuration
-	Output struct {
-		Directory string  `yaml:"directory"`          // Output directory for generated images
-		Format    string  `yaml:"format"`             // Output image format (png, jpg)
-		Filename  *string `yaml:"filename,omitempty"` // Custom filename template (optional, default: "ogp.{format}")
-	} `yaml:"output"`
+	Output OutputConfig `yaml:"output"`
 
-	// Text rendering configuration
-	Text struct {
-		// Content configuration
-		Content *string `yaml:"content,omitempty"` // Default content template (optional)
-		// Font configuration
-		Font string  `yaml:"font"` // Path to font file
-		Size float64 `yaml:"size"` // Default font size
-		// Text color configuration (supports hex color codes)
-		Color string `yaml:"color"` // Hex color code (e.g., "#FF00FF", "#ff00ff80")
-		// Text rendering area coordinates
-		Area          TextArea `yaml:"area"`
-		BlockPosition string   `yaml:"block_position"` // Text block position in area (e.g., "middle-center")
-		LineAlignment string   `yaml:"line_alignment"` // Individual line alignment within block ("left", "center", "right")
-		Overflow      string   `yaml:"overflow"`       // Overflow handling ("shrink" or "clip")
-		MinSize       float64  `yaml:"min_size"`       // Minimum font size for shrink mode
-		LineHeight    float64  `yaml:"line_height"`    // Line height multiplier
-		LetterSpacing int      `yaml:"letter_spacing"` // Letter spacing in pixels
-		// Japanese line breaking rules configuration
-		LineBreaking struct {
-			StartProhibited string `yaml:"start_prohibited"` // Characters that cannot start a line
-			EndProhibited   string `yaml:"end_prohibited"`   // Characters that cannot end a line
-		} `yaml:"line_breaking"`
-	} `yaml:"text"`
+	// Text rendering configurations
+	Title       TextConfig `yaml:"title"`       // Title text configuration
+	Description TextConfig `yaml:"description"` // Description text configuration
 
-	// Default overlay configuration (optional)
-	Overlay *struct {
-		Image     *string `yaml:"image,omitempty"` // Path to image file (relative to project root)
-		Placement *struct {
-			X      *int `yaml:"x,omitempty"`      // X position
-			Y      *int `yaml:"y,omitempty"`      // Y position
-			Width  *int `yaml:"width,omitempty"`  // Image width
-			Height *int `yaml:"height,omitempty"` // Image height
-		} `yaml:"placement,omitempty"`
-		Fit     *string  `yaml:"fit,omitempty"`     // Fit method ("cover", "contain", "fill", "none")
-		Opacity *float64 `yaml:"opacity,omitempty"` // Image opacity (0.0-1.0)
-	} `yaml:"overlay,omitempty"`
+	// Default overlay configuration
+	Overlay MainOverlayConfig `yaml:"overlay"`
 }
 
 // parseHexColor parses hex color codes like "#FF00FF" or "#ff00ff80"
@@ -100,88 +132,112 @@ func parseHexColor(hex string) (color.RGBA, error) {
 	}
 }
 
+// TextConfigOverride represents overrides for a text configuration in front matter.
+// All fields are optional pointers to allow partial overrides.
+type TextConfigOverride struct {
+	Visible       *bool                 `yaml:"visible,omitempty"`
+	Content       *string               `yaml:"content,omitempty"`
+	Font          *string               `yaml:"font,omitempty"`
+	Size          *float64              `yaml:"size,omitempty"`
+	Color         *string               `yaml:"color,omitempty"` // Hex color code
+	Area          *TextAreaConfig       `yaml:"area,omitempty"`
+	BlockPosition *string               `yaml:"block_position,omitempty"`
+	LineAlignment *string               `yaml:"line_alignment,omitempty"`
+	Overflow      *string               `yaml:"overflow,omitempty"`
+	MinSize       *float64              `yaml:"min_size,omitempty"`
+	LineHeight    *float64              `yaml:"line_height,omitempty"`
+	LetterSpacing *int                  `yaml:"letter_spacing,omitempty"`
+	LineBreaking  *LineBreakingOverride `yaml:"line_breaking,omitempty"`
+}
+
 // OGPFrontMatter represents OGP-specific settings in article front matter.
 // All fields are optional and override the corresponding config values.
 type OGPFrontMatter struct {
-	Text *struct {
-		Content *string  `yaml:"content,omitempty"`
-		Font    *string  `yaml:"font,omitempty"`
-		Size    *float64 `yaml:"size,omitempty"`
-		Color   *string  `yaml:"color,omitempty"` // Hex color code
-		Area    *struct {
-			X      *int `yaml:"x,omitempty"`
-			Y      *int `yaml:"y,omitempty"`
-			Width  *int `yaml:"width,omitempty"`
-			Height *int `yaml:"height,omitempty"`
-		} `yaml:"area,omitempty"`
-		BlockPosition *string  `yaml:"block_position,omitempty"`
-		LineAlignment *string  `yaml:"line_alignment,omitempty"`
-		Overflow      *string  `yaml:"overflow,omitempty"`
-		MinSize       *float64 `yaml:"min_size,omitempty"`
-		LineHeight    *float64 `yaml:"line_height,omitempty"`
-		LetterSpacing *int     `yaml:"letter_spacing,omitempty"`
-		LineBreaking  *struct {
-			StartProhibited *string `yaml:"start_prohibited,omitempty"` // Characters that cannot start a line
-			EndProhibited   *string `yaml:"end_prohibited,omitempty"`   // Characters that cannot end a line
-		} `yaml:"line_breaking,omitempty"`
-	} `yaml:"text,omitempty"`
+	// Text configurations
+	Title       *TextConfigOverride `yaml:"title,omitempty"`       // Title text overrides
+	Description *TextConfigOverride `yaml:"description,omitempty"` // Description text overrides
 
 	// Background settings
-	Background *struct {
-		Image *string `yaml:"image,omitempty"` // Path to background image (relative to article directory)
-		Color *string `yaml:"color,omitempty"` // Background color (hex)
-	} `yaml:"background,omitempty"`
+	Background *BackgroundOverride `yaml:"background,omitempty"`
 
 	// Overlay image composition settings
-	Overlay *struct {
-		Image     *string `yaml:"image,omitempty"` // Path to image file (relative to article directory)
-		Placement *struct {
-			X      *int `yaml:"x,omitempty"`      // X position
-			Y      *int `yaml:"y,omitempty"`      // Y position
-			Width  *int `yaml:"width,omitempty"`  // Image width
-			Height *int `yaml:"height,omitempty"` // Image height
-		} `yaml:"placement,omitempty"`
-		Fit     *string  `yaml:"fit,omitempty"`     // Fit method ("cover", "contain", "fill", "none")
-		Opacity *float64 `yaml:"opacity,omitempty"` // Image opacity (0.0-1.0)
-	} `yaml:"overlay,omitempty"`
+	Overlay *ArticleOverlayConfig `yaml:"overlay,omitempty"`
 
 	// Output settings
-	Output *struct {
-		Filename *string `yaml:"filename,omitempty"` // Custom filename template (optional)
-	} `yaml:"output,omitempty"`
+	Output *OutputOverride `yaml:"output,omitempty"`
 }
 
 // getDefaultConfig returns a config with sensible defaults for OGP generation.
 func getDefaultConfig() *Config {
 	config := &Config{}
 
-	// Background defaults
-	config.Background.Color = "#FFFFFF"
-
-	// Output defaults
-	config.Output.Directory = "public"
-	config.Output.Format = "png"
-
-	// Text defaults
-	config.Text.Font = "" // システムのフォントを自動選択
-	config.Text.Size = 64
-	config.Text.Color = "#000000"
-	config.Text.Area.X = 100
-	config.Text.Area.Y = 100
-	config.Text.Area.Width = 1000
-	config.Text.Area.Height = 430
-	config.Text.BlockPosition = "middle-center"
-	config.Text.LineAlignment = "left"
-	config.Text.Overflow = "shrink"
-	config.Text.MinSize = 12.0
-	config.Text.LineHeight = 1.2
-	config.Text.LetterSpacing = 1
-
-	// Japanese line breaking defaults
-	config.Text.LineBreaking.StartProhibited = ".)}]>!?、。，．！？)）］｝〉》」』ー～ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ々"
-	config.Text.LineBreaking.EndProhibited = "({[<（［｛〈《「『"
+	setDefaultBackground(config)
+	setDefaultOutput(config)
+	setDefaultTitle(config)
+	setDefaultDescription(config)
+	setDefaultOverlay(config)
 
 	return config
+}
+
+// setDefaultBackground configures default background settings
+func setDefaultBackground(config *Config) {
+	config.Background.Color = DefaultBackgroundColor
+}
+
+// setDefaultOutput configures default output settings
+func setDefaultOutput(config *Config) {
+	config.Output.Directory = DefaultOutputDirectory
+	config.Output.Format = FormatPNG
+}
+
+// setDefaultTitle configures default title settings
+func setDefaultTitle(config *Config) {
+	config.Title.Visible = true
+	config.Title.Font = ""
+	config.Title.Size = DefaultTitleFontSize
+	config.Title.Color = DefaultTitleColor
+	config.Title.Area.X = DefaultTitleAreaX
+	config.Title.Area.Y = DefaultTitleAreaY
+	config.Title.Area.Width = DefaultTitleAreaWidth
+	config.Title.Area.Height = DefaultTitleAreaHeight
+	config.Title.BlockPosition = DefaultTitleBlockPosition
+	config.Title.LineAlignment = DefaultTitleLineAlignment
+	config.Title.Overflow = OverflowShrink
+	config.Title.MinSize = DefaultTitleMinSize
+	config.Title.LineHeight = DefaultLineHeight
+	config.Title.LetterSpacing = DefaultTitleLetterSpacing
+	config.Title.LineBreaking.StartProhibited = DefaultStartProhibitedChars
+	config.Title.LineBreaking.EndProhibited = DefaultEndProhibitedChars
+}
+
+// setDefaultDescription configures default description settings
+func setDefaultDescription(config *Config) {
+	config.Description.Visible = false
+	config.Description.Font = ""
+	config.Description.Size = DefaultDescriptionFontSize
+	config.Description.Color = DefaultDescriptionColor
+	config.Description.Area.X = DefaultDescriptionAreaX
+	config.Description.Area.Y = DefaultDescriptionAreaY
+	config.Description.Area.Width = DefaultDescriptionAreaWidth
+	config.Description.Area.Height = DefaultDescriptionAreaHeight
+	config.Description.BlockPosition = DefaultDescriptionBlockPosition
+	config.Description.LineAlignment = DefaultDescriptionLineAlignment
+	config.Description.Overflow = OverflowClip
+	config.Description.MinSize = DefaultDescriptionMinSize
+	config.Description.LineHeight = DefaultLineHeight
+	config.Description.LetterSpacing = DefaultDescriptionLetterSpacing
+	config.Description.LineBreaking.StartProhibited = DefaultStartProhibitedChars
+	config.Description.LineBreaking.EndProhibited = DefaultEndProhibitedChars
+}
+
+// setDefaultOverlay configures default overlay settings
+func setDefaultOverlay(config *Config) {
+	config.Overlay.Visible = DefaultOverlayVisible
+	config.Overlay.Placement.X = DefaultOverlayX
+	config.Overlay.Placement.Y = DefaultOverlayY
+	config.Overlay.Fit = DefaultOverlayFit
+	config.Overlay.Opacity = DefaultOverlayOpacity
 }
 
 // loadConfig reads and parses a YAML configuration file.
@@ -209,17 +265,17 @@ func loadConfig(configPath string) (*Config, error) {
 // buildProhibitedMaps creates lookup maps for Japanese line breaking rules.
 // Returns two maps: one for characters that cannot start a line,
 // and one for characters that cannot end a line.
-func buildProhibitedMaps(config *Config) (map[rune]bool, map[rune]bool) {
+func buildProhibitedMaps(textConfig *TextConfig) (map[rune]bool, map[rune]bool) {
 	startProhibited := make(map[rune]bool)
 	endProhibited := make(map[rune]bool)
 
 	// Build map for characters that cannot start a line (行頭禁則文字)
-	for _, r := range []rune(config.Text.LineBreaking.StartProhibited) {
+	for _, r := range []rune(textConfig.LineBreaking.StartProhibited) {
 		startProhibited[r] = true
 	}
 
 	// Build map for characters that cannot end a line (行末禁則文字)
-	for _, r := range []rune(config.Text.LineBreaking.EndProhibited) {
+	for _, r := range []rune(textConfig.LineBreaking.EndProhibited) {
 		endProhibited[r] = true
 	}
 

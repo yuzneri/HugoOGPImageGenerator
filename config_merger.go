@@ -15,9 +15,56 @@ func (cm *ConfigMerger) MergeConfigs(baseConfig *Config, ogpFM *OGPFrontMatter) 
 		return baseConfig
 	}
 
+	// Deep copy the base config to avoid modifying the original
 	newConfig := *baseConfig
 
-	cm.mergeTextConfig(&newConfig, ogpFM)
+	// Deep copy pointer fields in base config to avoid reference sharing
+	if baseConfig.Background.Image != nil {
+		imageCopy := *baseConfig.Background.Image
+		newConfig.Background.Image = &imageCopy
+	}
+
+	if baseConfig.Output.Filename != nil {
+		filenameCopy := *baseConfig.Output.Filename
+		newConfig.Output.Filename = &filenameCopy
+	}
+
+	// Deep copy title content if it exists
+	if baseConfig.Title.Content != nil {
+		contentCopy := *baseConfig.Title.Content
+		newConfig.Title.Content = &contentCopy
+	}
+
+	// Deep copy description content if it exists
+	if baseConfig.Description.Content != nil {
+		contentCopy := *baseConfig.Description.Content
+		newConfig.Description.Content = &contentCopy
+	}
+
+	// Deep copy overlay config (value type)
+	newConfig.Overlay = baseConfig.Overlay
+
+	// Deep copy overlay pointer fields
+	if baseConfig.Overlay.Image != nil {
+		imageCopy := *baseConfig.Overlay.Image
+		newConfig.Overlay.Image = &imageCopy
+	}
+	// Fit is now a value type, copy directly
+	newConfig.Overlay.Fit = baseConfig.Overlay.Fit
+	// Opacity is now a value type, copy directly
+	newConfig.Overlay.Opacity = baseConfig.Overlay.Opacity
+
+	// Deep copy placement (it's a value type in MainOverlayConfig)
+	newConfig.Overlay.Placement = baseConfig.Overlay.Placement
+
+	// Merge title and description configurations separately
+	if ogpFM.Title != nil {
+		cm.mergeTextConfigOverride(&newConfig.Title, ogpFM.Title)
+	}
+	if ogpFM.Description != nil {
+		cm.mergeTextConfigOverride(&newConfig.Description, ogpFM.Description)
+	}
+
 	cm.mergeBackgroundConfig(&newConfig, ogpFM)
 	cm.mergeOutputConfig(&newConfig, ogpFM)
 	cm.mergeOverlayConfig(&newConfig, ogpFM)
@@ -25,35 +72,24 @@ func (cm *ConfigMerger) MergeConfigs(baseConfig *Config, ogpFM *OGPFrontMatter) 
 	return &newConfig
 }
 
-func (cm *ConfigMerger) mergeTextConfig(config *Config, ogpFM *OGPFrontMatter) {
-	if ogpFM.Text == nil {
-		return
-	}
+func (cm *ConfigMerger) mergeTextConfigOverride(config *TextConfig, override *TextConfigOverride) {
+	cm.mergeBoolPtr(&config.Visible, override.Visible)
+	cm.mergeStringPtrValue(&config.Content, override.Content)
+	cm.mergeStringPtr(&config.Font, override.Font)
+	cm.mergeFloat64Ptr(&config.Size, override.Size)
+	cm.mergeStringPtr(&config.Color, override.Color)
+	cm.mergeStringPtr(&config.BlockPosition, override.BlockPosition)
+	cm.mergeStringPtr(&config.LineAlignment, override.LineAlignment)
+	cm.mergeStringPtr(&config.Overflow, override.Overflow)
+	cm.mergeFloat64Ptr(&config.MinSize, override.MinSize)
+	cm.mergeFloat64Ptr(&config.LineHeight, override.LineHeight)
+	cm.mergeIntPtr(&config.LetterSpacing, override.LetterSpacing)
 
-	text := ogpFM.Text
-	if text.Content != nil {
-		config.Text.Content = text.Content
-	}
-	cm.mergeStringPtr(&config.Text.Font, text.Font)
-	cm.mergeFloat64Ptr(&config.Text.Size, text.Size)
-	cm.mergeStringPtr(&config.Text.Color, text.Color)
-	cm.mergeStringPtr(&config.Text.BlockPosition, text.BlockPosition)
-	cm.mergeStringPtr(&config.Text.LineAlignment, text.LineAlignment)
-	cm.mergeStringPtr(&config.Text.Overflow, text.Overflow)
-	cm.mergeFloat64Ptr(&config.Text.MinSize, text.MinSize)
-	cm.mergeFloat64Ptr(&config.Text.LineHeight, text.LineHeight)
-	cm.mergeIntPtr(&config.Text.LetterSpacing, text.LetterSpacing)
-
-	cm.mergeTextAreaConfig(&config.Text.Area, text.Area)
-	cm.mergeLineBreakingConfig(&config.Text.LineBreaking, text.LineBreaking)
+	cm.mergeTextAreaConfig(&config.Area, override.Area)
+	cm.mergeLineBreakingConfig(&config.LineBreaking, override.LineBreaking)
 }
 
-func (cm *ConfigMerger) mergeTextAreaConfig(area *TextArea, overrideArea *struct {
-	X      *int `yaml:"x,omitempty"`
-	Y      *int `yaml:"y,omitempty"`
-	Width  *int `yaml:"width,omitempty"`
-	Height *int `yaml:"height,omitempty"`
-}) {
+func (cm *ConfigMerger) mergeTextAreaConfig(area *TextArea, overrideArea *TextAreaConfig) {
 	if overrideArea == nil {
 		return
 	}
@@ -64,13 +100,7 @@ func (cm *ConfigMerger) mergeTextAreaConfig(area *TextArea, overrideArea *struct
 	cm.mergeIntPtr(&area.Height, overrideArea.Height)
 }
 
-func (cm *ConfigMerger) mergeLineBreakingConfig(lineBreaking *struct {
-	StartProhibited string `yaml:"start_prohibited"`
-	EndProhibited   string `yaml:"end_prohibited"`
-}, overrideLineBreaking *struct {
-	StartProhibited *string `yaml:"start_prohibited,omitempty"`
-	EndProhibited   *string `yaml:"end_prohibited,omitempty"`
-}) {
+func (cm *ConfigMerger) mergeLineBreakingConfig(lineBreaking *LineBreakingConfig, overrideLineBreaking *LineBreakingOverride) {
 	if overrideLineBreaking == nil {
 		return
 	}
@@ -85,9 +115,7 @@ func (cm *ConfigMerger) mergeBackgroundConfig(config *Config, ogpFM *OGPFrontMat
 	}
 
 	bg := ogpFM.Background
-	if bg.Image != nil {
-		config.Background.Image = bg.Image
-	}
+	cm.mergeStringPtrValue(&config.Background.Image, bg.Image)
 	cm.mergeStringPtr(&config.Background.Color, bg.Color)
 }
 
@@ -97,14 +125,36 @@ func (cm *ConfigMerger) mergeOutputConfig(config *Config, ogpFM *OGPFrontMatter)
 	}
 
 	output := ogpFM.Output
-	if output.Filename != nil {
-		config.Output.Filename = output.Filename
-	}
+	cm.mergeStringPtrValue(&config.Output.Filename, output.Filename)
 }
 
 func (cm *ConfigMerger) mergeOverlayConfig(config *Config, ogpFM *OGPFrontMatter) {
-	if ogpFM.Overlay != nil {
-		config.Overlay = ogpFM.Overlay
+	if ogpFM.Overlay == nil {
+		return
+	}
+
+	// Merge overlay configuration (config.Overlay is always a value, never nil)
+	overlay := ogpFM.Overlay
+	cm.mergeBoolPtr(&config.Overlay.Visible, overlay.Visible)
+	cm.mergeStringPtrValue(&config.Overlay.Image, overlay.Image)
+	cm.mergeStringPtr(&config.Overlay.Fit, overlay.Fit)
+	cm.mergeFloat64Ptr(&config.Overlay.Opacity, overlay.Opacity)
+
+	// Merge placement configuration
+	if overlay.Placement != nil {
+		// Directly merge values from article placement to main config placement
+		if overlay.Placement.X != 0 {
+			config.Overlay.Placement.X = overlay.Placement.X
+		}
+		if overlay.Placement.Y != 0 {
+			config.Overlay.Placement.Y = overlay.Placement.Y
+		}
+		if overlay.Placement.Width != 0 {
+			config.Overlay.Placement.Width = overlay.Placement.Width
+		}
+		if overlay.Placement.Height != 0 {
+			config.Overlay.Placement.Height = overlay.Placement.Height
+		}
 	}
 }
 
@@ -123,5 +173,35 @@ func (cm *ConfigMerger) mergeFloat64Ptr(target *float64, source *float64) {
 func (cm *ConfigMerger) mergeIntPtr(target *int, source *int) {
 	if source != nil {
 		*target = *source
+	}
+}
+
+func (cm *ConfigMerger) mergeBoolPtr(target *bool, source *bool) {
+	if source != nil {
+		*target = *source
+	}
+}
+
+// mergeStringPtrValue copies the value of source pointer to target pointer (avoiding reference sharing)
+func (cm *ConfigMerger) mergeStringPtrValue(target **string, source *string) {
+	if source != nil {
+		value := *source
+		*target = &value
+	}
+}
+
+// mergeFloat64PtrValue copies the value of source pointer to target pointer (avoiding reference sharing)
+func (cm *ConfigMerger) mergeFloat64PtrValue(target **float64, source *float64) {
+	if source != nil {
+		value := *source
+		*target = &value
+	}
+}
+
+// mergeIntPtrValue copies the value of source pointer to target pointer (avoiding reference sharing)
+func (cm *ConfigMerger) mergeIntPtrValue(target **int, source *int) {
+	if source != nil {
+		value := *source
+		*target = &value
 	}
 }

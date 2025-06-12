@@ -13,8 +13,8 @@ func findProjectRoot(startDir string) (string, error) {
 	dir := startDir
 	for {
 		// contentとstaticフォルダの存在をチェック
-		contentDir := filepath.Join(dir, "content")
-		staticDir := filepath.Join(dir, "static")
+		contentDir := filepath.Join(dir, ContentDirectory)
+		staticDir := filepath.Join(dir, StaticDirectory)
 
 		contentExists := false
 		staticExists := false
@@ -53,7 +53,7 @@ func listArticles(contentDir string) error {
 			return err
 		}
 
-		if d.Name() == "index.md" {
+		if d.Name() == DefaultIndexFilename {
 			articleDir := filepath.Dir(path)
 			relPath, err := filepath.Rel(contentDir, articleDir)
 			if err != nil {
@@ -82,13 +82,14 @@ func listArticles(contentDir string) error {
 			ogpSettings := ""
 			if fm.OGP != nil {
 				var settings []string
-				if fm.OGP.Text != nil && fm.OGP.Text.Content != nil {
+				if (fm.OGP.Title != nil && fm.OGP.Title.Content != nil) ||
+					(fm.OGP.Description != nil && fm.OGP.Description.Content != nil) {
 					settings = append(settings, "custom content")
 				}
 				if fm.OGP.Overlay != nil {
 					settings = append(settings, "overlay composition")
 				}
-				if fm.OGP.Text != nil {
+				if fm.OGP.Title != nil || fm.OGP.Description != nil {
 					settings = append(settings, "custom text")
 				}
 				if len(settings) > 0 {
@@ -118,19 +119,37 @@ func listArticles(contentDir string) error {
 // printUsage displays command-line usage information.
 func printUsage() {
 	fmt.Println("Usage:")
-	fmt.Println("  ogp-generator <project-root> [config-file]           # Generate all OGP images")
-	fmt.Println("  ogp-generator --single <project-root> <article-path> # Generate single article OGP")
-	fmt.Println("  ogp-generator --test <article-directory-path>        # Test single article OGP (output to current dir)")
-	fmt.Println("  ogp-generator --list <project-root>                  # List all available articles")
-	fmt.Println("  ogp-generator --version                              # Show version information")
+	fmt.Println("  ogp-generator <project-root>                          # Generate all OGP images")
+	fmt.Println("  ogp-generator --single <project-root> <article-path>  # Generate single article OGP")
+	fmt.Println("  ogp-generator --test <article-directory-path>         # Test single article OGP (output to current dir)")
+	fmt.Println("  ogp-generator --list <project-root>                   # List all available articles")
+	fmt.Println("  ogp-generator --version                               # Show version information")
+	fmt.Println("")
+	fmt.Println("Global Options:")
+	fmt.Println("  --config <config-file>   # Specify custom config file (can be used with any mode)")
+	fmt.Println("                           # Default: config.yaml in executable directory")
 	fmt.Println("")
 	fmt.Println("Examples:")
-	fmt.Println("  ogp-generator --test \"../../content/Book/JPEGの裏側\"")
-	fmt.Println("  ogp-generator --test \"/absolute/path/to/article/directory\"")
+	fmt.Println("  # Generate all with default config")
+	fmt.Println("  ogp-generator /path/to/project")
+	fmt.Println("")
+	fmt.Println("  # Generate all with custom config")
+	fmt.Println("  ogp-generator /path/to/project --config custom.yaml")
+	fmt.Println("")
+	fmt.Println("  # Test single article with custom config")
+	fmt.Println("  ogp-generator --test \"/path/to/article\" --config custom.yaml")
+	fmt.Println("")
+	fmt.Println("  # Generate single article with custom config")
+	fmt.Println("  ogp-generator --single /path/to/project \"article/path\" --config custom.yaml")
+	fmt.Println("")
+	fmt.Println("  # List articles (config file not required)")
+	fmt.Println("  ogp-generator --list /path/to/project")
 	fmt.Println("")
 	fmt.Println("Notes:")
 	fmt.Println("  - For --test mode, specify the full path to the article directory containing index.md")
 	fmt.Println("  - Relative paths are resolved from current working directory")
+	fmt.Println("  - The --config flag can be placed anywhere in the command line")
+	fmt.Println("  - If --config flag is not specified, uses config.yaml from executable directory")
 }
 
 // printVersion displays the application version.
@@ -146,64 +165,75 @@ type CLIArgs struct {
 	ArticlePath string
 }
 
+// parseConfigFlag extracts the --config flag value from arguments and returns the remaining args.
+func parseConfigFlag(args []string) (configPath string, remainingArgs []string) {
+	configPath = ""
+	remainingArgs = make([]string, 0, len(args))
+
+	for i := 0; i < len(args); i++ {
+		if args[i] == "--config" && i+1 < len(args) {
+			configPath = args[i+1]
+			i++ // Skip the config value
+		} else {
+			remainingArgs = append(remainingArgs, args[i])
+		}
+	}
+
+	return configPath, remainingArgs
+}
+
 // parseArgs parses command-line arguments and returns a CLIArgs structure.
 func parseArgs(args []string) (*CLIArgs, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("insufficient arguments")
 	}
 
+	// Extract --config flag from all arguments
+	configFromFlag, filteredArgs := parseConfigFlag(args)
+
 	cli := &CLIArgs{}
 
-	if args[1] == "--version" {
+	// Set default config path
+	execDir, _ := filepath.Abs(filepath.Dir(args[0]))
+	cli.ConfigPath = filepath.Join(execDir, DefaultConfigFilename)
+
+	// Override with --config flag if provided
+	if configFromFlag != "" {
+		cli.ConfigPath = configFromFlag
+	}
+
+	if filteredArgs[1] == "--version" {
 		cli.Mode = "--version"
 		return cli, nil
-	} else if args[1] == "--single" {
-		if len(args) < 4 {
+	} else if filteredArgs[1] == "--single" {
+		if len(filteredArgs) < 4 {
 			return nil, fmt.Errorf("--single mode requires project-root and article-path")
 		}
 
-		cli.Mode = args[1]
-		cli.ProjectRoot = args[2]
-		cli.ArticlePath = args[3]
-
-		execDir, _ := filepath.Abs(filepath.Dir(args[0]))
-		cli.ConfigPath = filepath.Join(execDir, "config.yaml")
-		if len(args) >= 5 {
-			cli.ConfigPath = args[4]
-		}
-	} else if args[1] == "--test" {
-		if len(args) < 3 {
+		cli.Mode = filteredArgs[1]
+		cli.ProjectRoot = filteredArgs[2]
+		cli.ArticlePath = filteredArgs[3]
+	} else if filteredArgs[1] == "--test" {
+		if len(filteredArgs) < 3 {
 			return nil, fmt.Errorf("--test mode requires article-path")
 		}
 
-		cli.Mode = args[1]
+		cli.Mode = filteredArgs[1]
 		// 記事パスを絶対パスに解決
 		resolver := NewPathResolver("")
-		articlePath, _ := resolver.ResolveFromCwd(args[2])
+		articlePath, _ := resolver.ResolveFromCwd(filteredArgs[2])
 		cli.ArticlePath = articlePath
 		cli.ProjectRoot = "" // testモードではプロジェクトルート不要
-
-		execDir, _ := filepath.Abs(filepath.Dir(args[0]))
-		cli.ConfigPath = filepath.Join(execDir, "config.yaml")
-		if len(args) >= 4 {
-			cli.ConfigPath = args[3]
-		}
-	} else if args[1] == "--list" {
-		if len(args) < 3 {
+	} else if filteredArgs[1] == "--list" {
+		if len(filteredArgs) < 3 {
 			return nil, fmt.Errorf("--list mode requires project-root")
 		}
 
-		cli.Mode = args[1]
-		cli.ProjectRoot = args[2]
+		cli.Mode = filteredArgs[1]
+		cli.ProjectRoot = filteredArgs[2]
 	} else {
 		cli.Mode = "--all"
-		cli.ProjectRoot = args[1]
-
-		execDir, _ := filepath.Abs(filepath.Dir(args[0]))
-		cli.ConfigPath = filepath.Join(execDir, "config.yaml")
-		if len(args) >= 3 {
-			cli.ConfigPath = args[2]
-		}
+		cli.ProjectRoot = filteredArgs[1]
 	}
 
 	return cli, nil

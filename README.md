@@ -50,27 +50,61 @@ output:
   format: "png"        # PNG format for images
   # filename: null     # Default: "ogp.{format}"
 
-text:
+# Title text configuration
+title:
+  visible: true        # Whether to render title (default: true)
   # content: null      # No default content template (uses article title)
   font: ""             # Auto-detect system fonts
   size: 64             # Font size in pixels
   color: "#000000"     # Black text
   area:
     x: 100             # Text area X position
-    y: 100             # Text area Y position  
+    y: 50              # Text area Y position
     width: 1000        # Text area width
-    height: 430        # Text area height
+    height: 250        # Text area height
   block_position: "middle-center" # Text block position in area
-  line_alignment: "left"          # Individual line alignment
+  line_alignment: "center"        # Individual line alignment
   overflow: "shrink"              # Shrink text to fit area
-  min_size: 12.0                  # Minimum font size when shrinking
+  min_size: 24.0                  # Minimum font size when shrinking
   line_height: 1.2                # Line height multiplier
   letter_spacing: 1               # Letter spacing in pixels
   line_breaking:
     start_prohibited: ".)}]>!?、。，．！？)）］｝〉》」』ー～ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ々"  # Japanese line-start prohibited chars
     end_prohibited: "({[<（［｛〈《「『"                                                            # Japanese line-end prohibited chars
 
-# overlay: null        # No overlay by default
+# Description text configuration
+description:
+  visible: false       # Whether to render description (default: false)
+  # content: null      # No default content template (uses article description)
+  font: ""             # Auto-detect system fonts
+  size: 32             # Font size in pixels
+  color: "#666666"     # Gray text
+  area:
+    x: 100             # Text area X position
+    y: 350             # Text area Y position
+    width: 1000        # Text area width
+    height: 200        # Text area height
+  block_position: "top-left"      # Text block position in area
+  line_alignment: "left"          # Individual line alignment
+  overflow: "clip"                # Overflow handling
+  min_size: 16.0                  # Minimum font size when shrinking
+  line_height: 1.2                # Line height multiplier
+  letter_spacing: 0               # Letter spacing in pixels
+  line_breaking:
+    start_prohibited: ".)}]>!?、。，．！？)）］｝〉》」』ー～ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ々"  # Japanese line-start prohibited chars
+    end_prohibited: "({[<（［｛〈《「『"                                                            # Japanese line-end prohibited chars
+
+# Overlay configuration
+overlay:
+  visible: false       # Whether to render overlay (default: false)
+  # image: null        # No overlay image by default
+  # placement:         # Placement configuration when overlay is used
+  #   x: 0
+  #   y: 0
+  #   width: 100
+  #   height: 100
+  # fit: "contain"     # Default fit method when overlay is configured
+  # opacity: 1.0       # Default opacity when overlay is configured
 ```
 
 ### Configuration Options
@@ -90,24 +124,49 @@ output:
   filename: "custom-{{.Title}}.{{.Format}}" # Custom filename template (optional)
 ```
 
-#### Text Configuration
+#### Title Text Configuration
 ```yaml
-text:
-  content: "{{.Title | default \"Default\"}}"  # Content template (optional)
+title:
+  visible: true                                # Whether to render title (default: true)
+  content: "{{.Title}}"  # Content template (optional)
   font: "fonts/custom.ttf"                     # Font file path (empty = auto-detect)
   size: 72                                     # Font size in pixels
-  color: "#FF0000"                             # Text color (hex)
+  color: "#000000"                             # Text color (hex)
   area:                                        # Text rendering area
     x: 50                                      # X position
     y: 50                                      # Y position
     width: 1200                                # Area width
-    height: 500                                # Area height
-  block_position: "top-left"                  # Text block position
+    height: 300                                # Area height
+  block_position: "middle-center"              # Text block position
   line_alignment: "center"                     # Line alignment within block
-  overflow: "clip"                             # Overflow handling
-  min_size: 8.0                                # Minimum font size for shrink mode
-  line_height: 1.5                             # Line height multiplier
-  letter_spacing: 2                            # Letter spacing in pixels
+  overflow: "shrink"                           # Overflow handling
+  min_size: 24.0                               # Minimum font size for shrink mode
+  line_height: 1.2                             # Line height multiplier
+  letter_spacing: 1                            # Letter spacing in pixels
+  line_breaking:                               # Japanese line breaking rules
+    start_prohibited: "、。！？」』）"          # Chars that cannot start a line
+    end_prohibited: "「『（"                   # Chars that cannot end a line
+```
+
+#### Description Text Configuration
+```yaml
+description:
+  visible: true                                # Whether to render description (default: true)
+  content: "{{.Description}}"                  # Content template (optional)
+  font: "fonts/description.ttf"               # Font file path (can be different from title)
+  size: 32                                     # Font size in pixels
+  color: "#666666"                             # Text color (hex)
+  area:                                        # Text rendering area
+    x: 50                                      # X position
+    y: 380                                     # Y position (below title)
+    width: 1200                                # Area width
+    height: 200                                # Area height
+  block_position: "top-left"                  # Text block position
+  line_alignment: "left"                       # Line alignment within block
+  overflow: "shrink"                           # Overflow handling
+  min_size: 16.0                               # Minimum font size for shrink mode
+  line_height: 1.4                             # Line height multiplier
+  letter_spacing: 0                            # Letter spacing in pixels
   line_breaking:                               # Japanese line breaking rules
     start_prohibited: "、。！？」』）"          # Chars that cannot start a line
     end_prohibited: "「『（"                   # Chars that cannot end a line
@@ -127,6 +186,7 @@ text:
 #### Overlay Configuration
 ```yaml
 overlay:
+  visible: true             # Whether to render overlay (default: false)
   image: "overlay.png"      # Overlay image path
   placement:                # Image positioning
     x: 100                  # X position
@@ -143,9 +203,9 @@ overlay:
 - `fill`: Stretch image to fill exact dimensions
 - `none`: Use original image size
 
-### Global Configuration (`config.yaml`)
+### Global Configuration
 
-Create a `config.yaml` file to override defaults:
+Create a `config.yaml` file in the same directory as the executable, or specify a custom path with the `--config` flag:
 
 ```yaml
 background:
@@ -157,24 +217,44 @@ output:
   format: "jpg"
   filename: "ogp-{{.Title | slugify}}.{{.Format}}"
 
-text:
-  content: "{{.Title | upper}} - {{.Fields.author | default \"Blog\"}}"
+title:
+  visible: true
+  content: "{{.Title | upper}}"
   font: "fonts/NotoSansCJK-Bold.ttc"
-  size: 48
+  size: 64
   color: "#2C3E50"
   area:
     x: 80
-    y: 120
+    y: 80
     width: 1040
-    height: 400
-  block_position: "middle-left"
+    height: 240
+  block_position: "middle-center"
+  line_alignment: "center"
+  overflow: "shrink"
+  min_size: 24.0
+  line_height: 1.2
+  letter_spacing: 1
+
+description:
+  visible: true
+  content: "{{.Description}} - {{.Fields.author | default \"Blog\"}}"
+  font: "fonts/NotoSansCJK-Regular.ttc"
+  size: 28
+  color: "#7F8C8D"
+  area:
+    x: 80
+    y: 340
+    width: 1040
+    height: 180
+  block_position: "top-left"
   line_alignment: "left"
   overflow: "shrink"
-  min_size: 20.0
+  min_size: 16.0
   line_height: 1.4
   letter_spacing: 0
 
 overlay:
+  visible: true
   image: "assets/logo.png"
   placement:
     x: 950
@@ -192,24 +272,50 @@ Override any configuration setting per article:
 ```yaml
 ---
 title: "Article Title"
+description: "Article description text"
 date: 2024-01-01
+author: "John Doe"
 ogp:
-  text:
-    content: "Custom: {{.Title | upper}} - {{dateFormat \"2006年1月2日\" .Date}}"
-    size: 72
+  title:
+    visible: true
+    content: "Custom: {{.Title | upper}}"
+    size: 80
     color: "#FF0000"
     area:
       x: 50
       y: 50
+      width: 1100
+      height: 280
+  description:
+    visible: true
+    content: "{{.Description}} - by {{.Fields.author}}"
+    size: 24
+    color: "#0066CC"
+    area:
+      x: 50
+      y: 350
+      width: 1100
+      height: 150
   background:
     color: "#F0F0F0"
-    image: "custom-bg.jpg"
+    image: "custom-bg.jpg"  # Relative to article directory
   overlay:
-    image: "article-overlay.png"
+    visible: true
+    image: "article-overlay.png"  # Relative to article directory
+    placement:
+      x: 900
+      y: 50
+      width: 250
+      height: 125
+    fit: "contain"
+    opacity: 0.9
   output:
     filename: "custom-{{.Title}}.{{.Format}}"
 ---
 ```
+
+**Note:** Image paths in front matter are resolved relative to the article directory first.
+If not found, they fall back to paths relative to the config directory.
 
 ## Template Functions
 
@@ -227,11 +333,16 @@ Content templates support Hugo-compatible functions:
 - `dateFormat`: `{{dateFormat "2006-01-02" .Date}}`
 - `now`: `{{dateFormat "2006" now}}`
 
+### Filename Template Functions
+- `slugify`: `{{.Title | slugify}}` - Convert text to URL-friendly format
+
 ### Available Template Data
 - `.Title`: Article title
 - `.Description`: Article description
 - `.Date`: Article date (parsed as time.Time)
 - `.URL`: Custom URL from front matter
+- `.RelPath`: Relative path from content directory
+- `.Format`: Output format (png, jpg)
 - `.Fields`: All front matter fields (access with `.Fields.fieldname`)
 
 **Examples:**
@@ -239,3 +350,21 @@ Content templates support Hugo-compatible functions:
 - `.Fields.author` - Custom author field
 - `.Fields.category` - Article category
 - `.Fields.tags` - Article tags (array)
+
+## Path Resolution
+
+### Asset Paths
+- **Config file**: Paths are relative to the config file directory
+- **Front matter**: Paths are relative to the article directory first, then fall back to config directory
+- **Font auto-detection**: When font path is empty, the system automatically detects Japanese fonts
+
+### Output Paths
+- **Default**: `{output.directory}/{article-path}/ogp.{format}`
+- **With custom URL**: `{output.directory}/{custom-url}/ogp.{format}`
+- **With filename template**: `{output.directory}/{article-path}/{generated-filename}`
+
+## Requirements
+
+- Go 1.18 or later
+- Hugo static site with content directory structure
+- Optional: Japanese fonts for Japanese text support (auto-detected when available)

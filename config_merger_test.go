@@ -1,7 +1,6 @@
 package main
 
 import (
-	"reflect"
 	"testing"
 )
 
@@ -17,8 +16,10 @@ func TestConfigMerger_MergeConfigs_NilOGPFrontMatter(t *testing.T) {
 	merger := NewConfigMerger()
 
 	baseConfig := &Config{}
-	baseConfig.Text.Size = 64.0
-	baseConfig.Text.Color = "#000000"
+	baseConfig.Title.Size = 64.0
+	baseConfig.Title.Color = "#000000"
+	baseConfig.Description.Size = 32.0
+	baseConfig.Description.Color = "#666666"
 	baseConfig.Background.Color = "#FFFFFF"
 
 	result := merger.MergeConfigs(baseConfig, nil)
@@ -32,8 +33,10 @@ func TestConfigMerger_MergeConfigs_EmptyOGPFrontMatter(t *testing.T) {
 	merger := NewConfigMerger()
 
 	baseConfig := &Config{}
-	baseConfig.Text.Size = 64.0
-	baseConfig.Text.Color = "#000000"
+	baseConfig.Title.Size = 64.0
+	baseConfig.Title.Color = "#000000"
+	baseConfig.Description.Size = 32.0
+	baseConfig.Description.Color = "#666666"
 	baseConfig.Background.Color = "#FFFFFF"
 
 	ogpFM := &OGPFrontMatter{}
@@ -45,28 +48,36 @@ func TestConfigMerger_MergeConfigs_EmptyOGPFrontMatter(t *testing.T) {
 		t.Error("MergeConfigs should return a new config instance")
 	}
 
-	if result.Text.Size != baseConfig.Text.Size {
-		t.Errorf("Expected text size %f, got %f", baseConfig.Text.Size, result.Text.Size)
+	if result.Title.Size != baseConfig.Title.Size {
+		t.Errorf("Expected title size %f, got %f", baseConfig.Title.Size, result.Title.Size)
 	}
 
-	if result.Text.Color != baseConfig.Text.Color {
-		t.Errorf("Expected text color %s, got %s", baseConfig.Text.Color, result.Text.Color)
+	if result.Title.Color != baseConfig.Title.Color {
+		t.Errorf("Expected title color %s, got %s", baseConfig.Title.Color, result.Title.Color)
+	}
+
+	if result.Description.Size != baseConfig.Description.Size {
+		t.Errorf("Expected description size %f, got %f", baseConfig.Description.Size, result.Description.Size)
+	}
+
+	if result.Description.Color != baseConfig.Description.Color {
+		t.Errorf("Expected description color %s, got %s", baseConfig.Description.Color, result.Description.Color)
 	}
 }
 
-func TestConfigMerger_MergeConfigs_TextOverrides(t *testing.T) {
+func TestConfigMerger_MergeConfigs_TitleOverrides(t *testing.T) {
 	merger := NewConfigMerger()
 
 	baseConfig := &Config{}
-	baseConfig.Text.Size = 64.0
-	baseConfig.Text.Color = "#000000"
-	baseConfig.Text.Font = "base-font.ttf"
-	baseConfig.Text.BlockPosition = "middle-center"
-	baseConfig.Text.LineAlignment = "left"
-	baseConfig.Text.Overflow = "shrink"
-	baseConfig.Text.MinSize = 12.0
-	baseConfig.Text.LineHeight = 1.2
-	baseConfig.Text.LetterSpacing = 1
+	baseConfig.Title.Size = 64.0
+	baseConfig.Title.Color = "#000000"
+	baseConfig.Title.Font = "base-font.ttf"
+	baseConfig.Title.BlockPosition = "middle-center"
+	baseConfig.Title.LineAlignment = "left"
+	baseConfig.Title.Overflow = "shrink"
+	baseConfig.Title.MinSize = 12.0
+	baseConfig.Title.LineHeight = 1.2
+	baseConfig.Title.LetterSpacing = 1
 
 	// Create override values
 	newSize := 48.0
@@ -80,28 +91,7 @@ func TestConfigMerger_MergeConfigs_TextOverrides(t *testing.T) {
 	newLetterSpacing := 2
 
 	ogpFM := &OGPFrontMatter{}
-	ogpFM.Text = &struct {
-		Content *string  `yaml:"content,omitempty"`
-		Font    *string  `yaml:"font,omitempty"`
-		Size    *float64 `yaml:"size,omitempty"`
-		Color   *string  `yaml:"color,omitempty"` // Hex color code
-		Area    *struct {
-			X      *int `yaml:"x,omitempty"`
-			Y      *int `yaml:"y,omitempty"`
-			Width  *int `yaml:"width,omitempty"`
-			Height *int `yaml:"height,omitempty"`
-		} `yaml:"area,omitempty"`
-		BlockPosition *string  `yaml:"block_position,omitempty"`
-		LineAlignment *string  `yaml:"line_alignment,omitempty"`
-		Overflow      *string  `yaml:"overflow,omitempty"`
-		MinSize       *float64 `yaml:"min_size,omitempty"`
-		LineHeight    *float64 `yaml:"line_height,omitempty"`
-		LetterSpacing *int     `yaml:"letter_spacing,omitempty"`
-		LineBreaking  *struct {
-			StartProhibited *string `yaml:"start_prohibited,omitempty"` // Characters that cannot start a line
-			EndProhibited   *string `yaml:"end_prohibited,omitempty"`   // Characters that cannot end a line
-		} `yaml:"line_breaking,omitempty"`
-	}{
+	ogpFM.Title = &TextConfigOverride{
 		Font:          &newFont,
 		Size:          &newSize,
 		Color:         &newColor,
@@ -115,48 +105,90 @@ func TestConfigMerger_MergeConfigs_TextOverrides(t *testing.T) {
 
 	result := merger.MergeConfigs(baseConfig, ogpFM)
 
-	if result.Text.Size != newSize {
-		t.Errorf("Expected text size %f, got %f", newSize, result.Text.Size)
+	if result.Title.Size != newSize {
+		t.Errorf("Expected title size %f, got %f", newSize, result.Title.Size)
 	}
 
-	if result.Text.Color != newColor {
-		t.Errorf("Expected text color %s, got %s", newColor, result.Text.Color)
+	if result.Title.Color != newColor {
+		t.Errorf("Expected title color %s, got %s", newColor, result.Title.Color)
 	}
 
-	if result.Text.Font != newFont {
-		t.Errorf("Expected text font %s, got %s", newFont, result.Text.Font)
+	if result.Title.Font != newFont {
+		t.Errorf("Expected title font %s, got %s", newFont, result.Title.Font)
 	}
 
-	if result.Text.BlockPosition != newAlignment {
-		t.Errorf("Expected text alignment %s, got %s", newAlignment, result.Text.BlockPosition)
+	if result.Title.BlockPosition != newAlignment {
+		t.Errorf("Expected title alignment %s, got %s", newAlignment, result.Title.BlockPosition)
 	}
 
-	if result.Text.LineAlignment != newLineAlignment {
-		t.Errorf("Expected line alignment %s, got %s", newLineAlignment, result.Text.LineAlignment)
+	if result.Title.LineAlignment != newLineAlignment {
+		t.Errorf("Expected line alignment %s, got %s", newLineAlignment, result.Title.LineAlignment)
 	}
 
-	if result.Text.Overflow != newOverflow {
-		t.Errorf("Expected overflow %s, got %s", newOverflow, result.Text.Overflow)
+	if result.Title.Overflow != newOverflow {
+		t.Errorf("Expected overflow %s, got %s", newOverflow, result.Title.Overflow)
 	}
 
-	if result.Text.MinSize != newMinSize {
-		t.Errorf("Expected min size %f, got %f", newMinSize, result.Text.MinSize)
+	if result.Title.MinSize != newMinSize {
+		t.Errorf("Expected min size %f, got %f", newMinSize, result.Title.MinSize)
 	}
 
-	if result.Text.LineHeight != newLineHeight {
-		t.Errorf("Expected line height %f, got %f", newLineHeight, result.Text.LineHeight)
+	if result.Title.LineHeight != newLineHeight {
+		t.Errorf("Expected line height %f, got %f", newLineHeight, result.Title.LineHeight)
 	}
 
-	if result.Text.LetterSpacing != newLetterSpacing {
-		t.Errorf("Expected letter spacing %d, got %d", newLetterSpacing, result.Text.LetterSpacing)
+	if result.Title.LetterSpacing != newLetterSpacing {
+		t.Errorf("Expected letter spacing %d, got %d", newLetterSpacing, result.Title.LetterSpacing)
 	}
 }
 
-func TestConfigMerger_MergeConfigs_TextAreaOverrides(t *testing.T) {
+func TestConfigMerger_MergeConfigs_DescriptionOverrides(t *testing.T) {
 	merger := NewConfigMerger()
 
 	baseConfig := &Config{}
-	baseConfig.Text.Area = TextArea{
+	baseConfig.Description.Visible = true
+	baseConfig.Description.Size = 32.0
+	baseConfig.Description.Color = "#666666"
+	baseConfig.Description.Font = "base-font.ttf"
+
+	// Create override values
+	newVisible := false
+	newSize := 24.0
+	newColor := "#333333"
+	newFont := "description-font.ttf"
+
+	ogpFM := &OGPFrontMatter{}
+	ogpFM.Description = &TextConfigOverride{
+		Visible: &newVisible,
+		Font:    &newFont,
+		Size:    &newSize,
+		Color:   &newColor,
+	}
+
+	result := merger.MergeConfigs(baseConfig, ogpFM)
+
+	if result.Description.Visible != newVisible {
+		t.Errorf("Expected description visible %t, got %t", newVisible, result.Description.Visible)
+	}
+
+	if result.Description.Size != newSize {
+		t.Errorf("Expected description size %f, got %f", newSize, result.Description.Size)
+	}
+
+	if result.Description.Color != newColor {
+		t.Errorf("Expected description color %s, got %s", newColor, result.Description.Color)
+	}
+
+	if result.Description.Font != newFont {
+		t.Errorf("Expected description font %s, got %s", newFont, result.Description.Font)
+	}
+}
+
+func TestConfigMerger_MergeConfigs_TitleAreaOverrides(t *testing.T) {
+	merger := NewConfigMerger()
+
+	baseConfig := &Config{}
+	baseConfig.Title.Area = TextArea{
 		X:      50,
 		Y:      50,
 		Width:  700,
@@ -169,34 +201,8 @@ func TestConfigMerger_MergeConfigs_TextAreaOverrides(t *testing.T) {
 	newHeight := 300
 
 	ogpFM := &OGPFrontMatter{}
-	ogpFM.Text = &struct {
-		Content *string  `yaml:"content,omitempty"`
-		Font    *string  `yaml:"font,omitempty"`
-		Size    *float64 `yaml:"size,omitempty"`
-		Color   *string  `yaml:"color,omitempty"` // Hex color code
-		Area    *struct {
-			X      *int `yaml:"x,omitempty"`
-			Y      *int `yaml:"y,omitempty"`
-			Width  *int `yaml:"width,omitempty"`
-			Height *int `yaml:"height,omitempty"`
-		} `yaml:"area,omitempty"`
-		BlockPosition *string  `yaml:"block_position,omitempty"`
-		LineAlignment *string  `yaml:"line_alignment,omitempty"`
-		Overflow      *string  `yaml:"overflow,omitempty"`
-		MinSize       *float64 `yaml:"min_size,omitempty"`
-		LineHeight    *float64 `yaml:"line_height,omitempty"`
-		LetterSpacing *int     `yaml:"letter_spacing,omitempty"`
-		LineBreaking  *struct {
-			StartProhibited *string `yaml:"start_prohibited,omitempty"` // Characters that cannot start a line
-			EndProhibited   *string `yaml:"end_prohibited,omitempty"`   // Characters that cannot end a line
-		} `yaml:"line_breaking,omitempty"`
-	}{
-		Area: &struct {
-			X      *int `yaml:"x,omitempty"`
-			Y      *int `yaml:"y,omitempty"`
-			Width  *int `yaml:"width,omitempty"`
-			Height *int `yaml:"height,omitempty"`
-		}{
+	ogpFM.Title = &TextConfigOverride{
+		Area: &TextAreaConfig{
 			X:      &newX,
 			Y:      &newY,
 			Width:  &newWidth,
@@ -206,20 +212,20 @@ func TestConfigMerger_MergeConfigs_TextAreaOverrides(t *testing.T) {
 
 	result := merger.MergeConfigs(baseConfig, ogpFM)
 
-	if result.Text.Area.X != newX {
-		t.Errorf("Expected area X %d, got %d", newX, result.Text.Area.X)
+	if result.Title.Area.X != newX {
+		t.Errorf("Expected area X %d, got %d", newX, result.Title.Area.X)
 	}
 
-	if result.Text.Area.Y != newY {
-		t.Errorf("Expected area Y %d, got %d", newY, result.Text.Area.Y)
+	if result.Title.Area.Y != newY {
+		t.Errorf("Expected area Y %d, got %d", newY, result.Title.Area.Y)
 	}
 
-	if result.Text.Area.Width != newWidth {
-		t.Errorf("Expected area width %d, got %d", newWidth, result.Text.Area.Width)
+	if result.Title.Area.Width != newWidth {
+		t.Errorf("Expected area width %d, got %d", newWidth, result.Title.Area.Width)
 	}
 
-	if result.Text.Area.Height != newHeight {
-		t.Errorf("Expected area height %d, got %d", newHeight, result.Text.Area.Height)
+	if result.Title.Area.Height != newHeight {
+		t.Errorf("Expected area height %d, got %d", newHeight, result.Title.Area.Height)
 	}
 }
 
@@ -234,10 +240,7 @@ func TestConfigMerger_MergeConfigs_BackgroundOverrides(t *testing.T) {
 	newImage := "new-background.png"
 
 	ogpFM := &OGPFrontMatter{}
-	ogpFM.Background = &struct {
-		Image *string `yaml:"image,omitempty"` // Path to background image (relative to article directory)
-		Color *string `yaml:"color,omitempty"` // Background color (hex)
-	}{
+	ogpFM.Background = &BackgroundOverride{
 		Color: &newColor,
 		Image: &newImage,
 	}
@@ -253,196 +256,702 @@ func TestConfigMerger_MergeConfigs_BackgroundOverrides(t *testing.T) {
 	}
 }
 
-func TestConfigMerger_MergeConfigs_OutputOverrides(t *testing.T) {
+func TestConfigMerger_MergeConfigs_LineBreakingOverrides(t *testing.T) {
 	merger := NewConfigMerger()
 
 	baseConfig := &Config{}
-	baseConfig.Output.Filename = nil
+	baseConfig.Title.LineBreaking.StartProhibited = "。、"
+	baseConfig.Title.LineBreaking.EndProhibited = "「（"
 
-	newFilename := "custom-filename"
+	newStartProhibited := "。、！？"
+	newEndProhibited := "「（【"
 
 	ogpFM := &OGPFrontMatter{}
-	ogpFM.Output = &struct {
-		Filename *string `yaml:"filename,omitempty"` // Custom filename template (optional)
-	}{
-		Filename: &newFilename,
+	ogpFM.Title = &TextConfigOverride{
+		LineBreaking: &LineBreakingOverride{
+			StartProhibited: &newStartProhibited,
+			EndProhibited:   &newEndProhibited,
+		},
 	}
 
 	result := merger.MergeConfigs(baseConfig, ogpFM)
 
-	if result.Output.Filename == nil || *result.Output.Filename != newFilename {
-		t.Errorf("Expected output filename %s, got %v", newFilename, result.Output.Filename)
+	if result.Title.LineBreaking.StartProhibited != newStartProhibited {
+		t.Errorf("Expected start prohibited %s, got %s", newStartProhibited, result.Title.LineBreaking.StartProhibited)
+	}
+
+	if result.Title.LineBreaking.EndProhibited != newEndProhibited {
+		t.Errorf("Expected end prohibited %s, got %s", newEndProhibited, result.Title.LineBreaking.EndProhibited)
 	}
 }
 
-func TestConfigMerger_MergeConfigs_OverlayOverrides(t *testing.T) {
+func TestConfigMerger_MergeConfigs_ComplexOverrides(t *testing.T) {
 	merger := NewConfigMerger()
 
-	baseConfig := &Config{}
-	baseConfig.Overlay = nil
+	baseConfig := getDefaultConfig()
 
-	newOverlay := &struct {
-		Image     *string `yaml:"image,omitempty"` // Path to image file (relative to article directory)
-		Placement *struct {
-			X      *int `yaml:"x,omitempty"`      // X position
-			Y      *int `yaml:"y,omitempty"`      // Y position
-			Width  *int `yaml:"width,omitempty"`  // Image width
-			Height *int `yaml:"height,omitempty"` // Image height
-		} `yaml:"placement,omitempty"`
-		Fit     *string  `yaml:"fit,omitempty"`     // Fit method ("cover", "contain", "fill", "none")
-		Opacity *float64 `yaml:"opacity,omitempty"` // Image opacity (0.0-1.0)
-	}{}
-	imageValue := "overlay.png"
-	newOverlay.Image = &imageValue
-	placementValue := struct {
-		X      *int `yaml:"x,omitempty"`      // X position
-		Y      *int `yaml:"y,omitempty"`      // Y position
-		Width  *int `yaml:"width,omitempty"`  // Image width
-		Height *int `yaml:"height,omitempty"` // Image height
-	}{}
-	x := 100
-	y := 200
-	width := 300
-	height := 400
-	placementValue.X = &x
-	placementValue.Y = &y
-	placementValue.Width = &width
-	placementValue.Height = &height
-	newOverlay.Placement = &placementValue
-	fitValue := "contain"
-	newOverlay.Fit = &fitValue
-	opacityValue := 0.8
-	newOverlay.Opacity = &opacityValue
+	// Complex override scenario
+	titleContent := "{{.Title}} - Custom"
+	descContent := "{{.Description}} - Summary"
+	titleSize := 72.0
+	descSize := 28.0
+	bgImage := "custom-bg.jpg"
+	overlayImage := "logo.png"
 
 	ogpFM := &OGPFrontMatter{}
-	ogpFM.Overlay = newOverlay
+
+	// Title overrides
+	ogpFM.Title = &TextConfigOverride{
+		Content: &titleContent,
+		Size:    &titleSize,
+	}
+
+	// Description overrides
+	ogpFM.Description = &TextConfigOverride{
+		Content: &descContent,
+		Size:    &descSize,
+	}
+
+	// Background override
+	ogpFM.Background = &BackgroundOverride{
+		Image: &bgImage,
+	}
+
+	// Overlay configuration
+	ogpFM.Overlay = &ArticleOverlayConfig{
+		Image: &overlayImage,
+	}
 
 	result := merger.MergeConfigs(baseConfig, ogpFM)
 
-	if !reflect.DeepEqual(result.Overlay, newOverlay) {
-		t.Errorf("Expected overlay config %+v, got %+v", newOverlay, result.Overlay)
+	// Verify title overrides
+	if result.Title.Content == nil || *result.Title.Content != titleContent {
+		t.Errorf("Expected title content %s, got %v", titleContent, result.Title.Content)
+	}
+	if result.Title.Size != titleSize {
+		t.Errorf("Expected title size %f, got %f", titleSize, result.Title.Size)
+	}
+
+	// Verify description overrides
+	if result.Description.Content == nil || *result.Description.Content != descContent {
+		t.Errorf("Expected description content %s, got %v", descContent, result.Description.Content)
+	}
+	if result.Description.Size != descSize {
+		t.Errorf("Expected description size %f, got %f", descSize, result.Description.Size)
+	}
+
+	// Verify background override
+	if result.Background.Image == nil || *result.Background.Image != bgImage {
+		t.Errorf("Expected background image %s, got %v", bgImage, result.Background.Image)
+	}
+
+	// Verify overlay is set
+	if result.Overlay.Image == nil || *result.Overlay.Image != overlayImage {
+		t.Errorf("Expected overlay image %s, got %v", overlayImage, result.Overlay.Image)
 	}
 }
 
-func TestConfigMerger_mergeStringPtr(t *testing.T) {
+func TestConfigMerger_MergeHelpers(t *testing.T) {
 	merger := NewConfigMerger()
 
-	target := "original"
-	source := "updated"
+	// Test mergeStringPtr
+	t.Run("mergeStringPtr", func(t *testing.T) {
+		base := "base"
+		override := "override"
+		merger.mergeStringPtr(&base, &override)
+		if base != override {
+			t.Errorf("Expected %s, got %s", override, base)
+		}
 
-	merger.mergeStringPtr(&target, &source)
+		base = "base"
+		merger.mergeStringPtr(&base, nil)
+		if base != "base" {
+			t.Errorf("Expected base to remain unchanged")
+		}
+	})
 
-	if target != source {
-		t.Errorf("Expected target to be %s, got %s", source, target)
-	}
+	// Test mergeFloat64Ptr
+	t.Run("mergeFloat64Ptr", func(t *testing.T) {
+		base := 10.0
+		override := 20.0
+		merger.mergeFloat64Ptr(&base, &override)
+		if base != override {
+			t.Errorf("Expected %f, got %f", override, base)
+		}
 
-	// Test with nil source
-	target = "original"
-	merger.mergeStringPtr(&target, nil)
+		base = 10.0
+		merger.mergeFloat64Ptr(&base, nil)
+		if base != 10.0 {
+			t.Errorf("Expected base to remain unchanged")
+		}
+	})
 
-	if target != "original" {
-		t.Errorf("Expected target to remain %s when source is nil, got %s", "original", target)
-	}
+	// Test mergeIntPtr
+	t.Run("mergeIntPtr", func(t *testing.T) {
+		base := 10
+		override := 20
+		merger.mergeIntPtr(&base, &override)
+		if base != override {
+			t.Errorf("Expected %d, got %d", override, base)
+		}
+
+		base = 10
+		merger.mergeIntPtr(&base, nil)
+		if base != 10 {
+			t.Errorf("Expected base to remain unchanged")
+		}
+	})
 }
 
-func TestConfigMerger_mergeFloat64Ptr(t *testing.T) {
+func TestConfigMerger_OverlayConfiguration(t *testing.T) {
 	merger := NewConfigMerger()
 
-	target := 1.0
-	source := 2.0
+	// Test that empty overlay in base config is properly overridden
+	baseConfig := &Config{}
+	// Overlay is initialized as zero value by default
 
-	merger.mergeFloat64Ptr(&target, &source)
+	overlayImage := "overlay.png"
+	x := 10
+	y := 20
+	opacity := 0.8
+	fit := "contain"
 
-	if target != source {
-		t.Errorf("Expected target to be %f, got %f", source, target)
+	ogpFM := &OGPFrontMatter{}
+	ogpFM.Overlay = &ArticleOverlayConfig{
+		Image:   &overlayImage,
+		Opacity: &opacity,
+		Fit:     &fit,
+		Placement: &PlacementConfig{
+			X: x,
+			Y: y,
+		},
 	}
 
-	// Test with nil source
-	target = 1.0
-	merger.mergeFloat64Ptr(&target, nil)
+	result := merger.MergeConfigs(baseConfig, ogpFM)
 
-	if target != 1.0 {
-		t.Errorf("Expected target to remain %f when source is nil, got %f", 1.0, target)
+	// Overlay is always present as a value type, check if it has meaningful data
+	if result.Overlay.Image == nil {
+		t.Error("Expected overlay to have configuration set")
+		return
+	}
+
+	if result.Overlay.Image == nil || *result.Overlay.Image != overlayImage {
+		t.Errorf("Expected overlay image %s, got %v", overlayImage, result.Overlay.Image)
+	}
+
+	if result.Overlay.Opacity != opacity {
+		t.Errorf("Expected overlay opacity %f, got %f", opacity, result.Overlay.Opacity)
+	}
+
+	if result.Overlay.Fit != fit {
+		t.Errorf("Expected overlay fit %s, got %s", fit, result.Overlay.Fit)
+	}
+
+	if result.Overlay.Placement.X != x {
+		t.Errorf("Expected overlay placement X %d, got %d", x, result.Overlay.Placement.X)
 	}
 }
 
-func TestConfigMerger_mergeIntPtr(t *testing.T) {
-	merger := NewConfigMerger()
-
-	target := 1
-	source := 2
-
-	merger.mergeIntPtr(&target, &source)
-
-	if target != source {
-		t.Errorf("Expected target to be %d, got %d", source, target)
-	}
-
-	// Test with nil source
-	target = 1
-	merger.mergeIntPtr(&target, nil)
-
-	if target != 1 {
-		t.Errorf("Expected target to remain %d when source is nil, got %d", 1, target)
-	}
-}
-
-func TestConfigMerger_MergeConfigs_PartialOverrides(t *testing.T) {
+func TestConfigMerger_OutputConfiguration(t *testing.T) {
 	merger := NewConfigMerger()
 
 	baseConfig := &Config{}
-	baseConfig.Text.Size = 64.0
-	baseConfig.Text.Color = "#000000"
-	baseConfig.Text.Font = "base-font.ttf"
+	baseConfig.Output.Directory = "public"
+	baseConfig.Output.Format = "png"
+
+	// Only filename can be overridden in front matter
+	filename := "custom-{.Title}.png"
+
+	ogpFM := &OGPFrontMatter{}
+	ogpFM.Output = &OutputOverride{
+		Filename: &filename,
+	}
+
+	result := merger.MergeConfigs(baseConfig, ogpFM)
+
+	// Directory and format should remain unchanged
+	if result.Output.Directory != baseConfig.Output.Directory {
+		t.Errorf("Output directory should not change: expected %s, got %s",
+			baseConfig.Output.Directory, result.Output.Directory)
+	}
+
+	if result.Output.Format != baseConfig.Output.Format {
+		t.Errorf("Output format should not change: expected %s, got %s",
+			baseConfig.Output.Format, result.Output.Format)
+	}
+
+	// Filename should be updated
+	if result.Output.Filename == nil || *result.Output.Filename != filename {
+		t.Errorf("Expected output filename %s, got %v", filename, result.Output.Filename)
+	}
+}
+
+// Test that deep copy works correctly
+func TestConfigMerger_DeepCopy(t *testing.T) {
+	merger := NewConfigMerger()
+
+	baseConfig := &Config{}
+	baseConfig.Title.Size = 64.0
+	baseConfig.Title.Color = "#000000"
+	baseConfig.Title.Area = TextArea{X: 10, Y: 20, Width: 100, Height: 200}
+
+	ogpFM := &OGPFrontMatter{}
+
+	result := merger.MergeConfigs(baseConfig, ogpFM)
+
+	// Modify the result
+	result.Title.Size = 128.0
+	result.Title.Area.X = 50
+
+	// Original should be unchanged
+	if baseConfig.Title.Size != 64.0 {
+		t.Error("Base config was modified")
+	}
+
+	if baseConfig.Title.Area.X != 10 {
+		t.Error("Base config area was modified")
+	}
+}
+
+// Test pointer reference isolation for all pointer fields
+func TestConfigMerger_PointerReferenceIsolation(t *testing.T) {
+	merger := NewConfigMerger()
+
+	// Set up base config with pointer fields
+	originalTitleContent := "Original Title"
+	originalBgImage := "original-bg.jpg"
+	originalFilename := "original.png"
+	originalOverlayImage := "original-overlay.png"
+	originalFit := "contain"
+	originalOpacity := 0.5
+
+	baseConfig := &Config{}
+	baseConfig.Title.Content = &originalTitleContent
+	baseConfig.Background.Image = &originalBgImage
+	baseConfig.Output.Filename = &originalFilename
+	baseConfig.Overlay = MainOverlayConfig{
+		Visible: true,
+		Image:   &originalOverlayImage,
+		Fit:     originalFit,
+		Opacity: originalOpacity,
+	}
+
+	t.Run("title content isolation", func(t *testing.T) {
+		ogpFM := &OGPFrontMatter{}
+		result := merger.MergeConfigs(baseConfig, ogpFM)
+
+		// Modify merged config
+		if result.Title.Content != nil {
+			*result.Title.Content = "Modified Title"
+		}
+
+		// Original should remain unchanged
+		if *baseConfig.Title.Content != originalTitleContent {
+			t.Errorf("Base config title content was modified: expected %s, got %s",
+				originalTitleContent, *baseConfig.Title.Content)
+		}
+	})
+
+	t.Run("background image isolation", func(t *testing.T) {
+		ogpFM := &OGPFrontMatter{}
+		result := merger.MergeConfigs(baseConfig, ogpFM)
+
+		// Modify merged config
+		if result.Background.Image != nil {
+			*result.Background.Image = "modified-bg.jpg"
+		}
+
+		// Original should remain unchanged
+		if *baseConfig.Background.Image != originalBgImage {
+			t.Errorf("Base config background image was modified: expected %s, got %s",
+				originalBgImage, *baseConfig.Background.Image)
+		}
+	})
+
+	t.Run("output filename isolation", func(t *testing.T) {
+		ogpFM := &OGPFrontMatter{}
+		result := merger.MergeConfigs(baseConfig, ogpFM)
+
+		// Modify merged config
+		if result.Output.Filename != nil {
+			*result.Output.Filename = "modified.png"
+		}
+
+		// Original should remain unchanged
+		if *baseConfig.Output.Filename != originalFilename {
+			t.Errorf("Base config output filename was modified: expected %s, got %s",
+				originalFilename, *baseConfig.Output.Filename)
+		}
+	})
+
+	t.Run("overlay pointer isolation", func(t *testing.T) {
+		ogpFM := &OGPFrontMatter{}
+		result := merger.MergeConfigs(baseConfig, ogpFM)
+
+		// Modify merged config overlay fields
+		if result.Overlay.Image != nil {
+			*result.Overlay.Image = "modified-overlay.png"
+		}
+		// Fit is now a value type, can be assigned directly
+		result.Overlay.Fit = "cover"
+		// Opacity is now a value type, can be assigned directly
+		result.Overlay.Opacity = 0.8
+
+		// Original should remain unchanged
+		if *baseConfig.Overlay.Image != originalOverlayImage {
+			t.Errorf("Base config overlay image was modified: expected %s, got %s",
+				originalOverlayImage, *baseConfig.Overlay.Image)
+		}
+		if baseConfig.Overlay.Fit != originalFit {
+			t.Errorf("Base config overlay fit was modified: expected %s, got %s",
+				originalFit, baseConfig.Overlay.Fit)
+		}
+		if baseConfig.Overlay.Opacity != originalOpacity {
+			t.Errorf("Base config overlay opacity was modified: expected %f, got %f",
+				originalOpacity, baseConfig.Overlay.Opacity)
+		}
+	})
+}
+
+// Test that merging with overrides doesn't affect base config pointers
+func TestConfigMerger_OverridePointerIsolation(t *testing.T) {
+	merger := NewConfigMerger()
+
+	// Base config
+	originalContent := "Original"
+	baseConfig := &Config{}
+	baseConfig.Title.Content = &originalContent
+
+	// Override values
+	overrideContent := "Override"
+	ogpFM := &OGPFrontMatter{
+		Title: &TextConfigOverride{
+			Content: &overrideContent,
+		},
+	}
+
+	result := merger.MergeConfigs(baseConfig, ogpFM)
+
+	// Result should have override value
+	if result.Title.Content == nil || *result.Title.Content != overrideContent {
+		t.Errorf("Expected result content %s, got %v", overrideContent, result.Title.Content)
+	}
+
+	// Base config should remain unchanged
+	if *baseConfig.Title.Content != originalContent {
+		t.Errorf("Base config was modified: expected %s, got %s",
+			originalContent, *baseConfig.Title.Content)
+	}
+
+	// Modify override source - result should not be affected
+	overrideContent = "Modified Source"
+	if result.Title.Content != nil && *result.Title.Content == "Modified Source" {
+		t.Error("Result was affected by modifying override source")
+	}
+}
+
+// Test deep nested pointer isolation (Overlay.Placement)
+func TestConfigMerger_DeepNestedPointerIsolation(t *testing.T) {
+	merger := NewConfigMerger()
+
+	// Base config with nested pointers
+	originalX := 10
+	originalY := 20
+	originalWidth := 100
+	originalHeight := 200
+
+	baseConfig := &Config{}
+	baseConfig.Overlay = MainOverlayConfig{
+		Visible: true,
+		Placement: PlacementConfig{
+			X:      originalX,
+			Y:      originalY,
+			Width:  originalWidth,
+			Height: originalHeight,
+		},
+	}
+
+	ogpFM := &OGPFrontMatter{}
+	result := merger.MergeConfigs(baseConfig, ogpFM)
+
+	// Modify result's placement values
+	result.Overlay.Placement.X = 50
+	result.Overlay.Placement.Y = 60
+	result.Overlay.Placement.Width = 300
+	result.Overlay.Placement.Height = 400
+
+	// Original should remain unchanged
+	if baseConfig.Overlay.Placement.X != originalX {
+		t.Errorf("Base config placement X was modified: expected %d, got %d",
+			originalX, baseConfig.Overlay.Placement.X)
+	}
+	if baseConfig.Overlay.Placement.Y != originalY {
+		t.Errorf("Base config placement Y was modified: expected %d, got %d",
+			originalY, baseConfig.Overlay.Placement.Y)
+	}
+	if baseConfig.Overlay.Placement.Width != originalWidth {
+		t.Errorf("Base config placement Width was modified: expected %d, got %d",
+			originalWidth, baseConfig.Overlay.Placement.Width)
+	}
+	if baseConfig.Overlay.Placement.Height != originalHeight {
+		t.Errorf("Base config placement Height was modified: expected %d, got %d",
+			originalHeight, baseConfig.Overlay.Placement.Height)
+	}
+}
+
+// Test multi-article processing isolation
+func TestConfigMerger_MultiArticleIsolation(t *testing.T) {
+	merger := NewConfigMerger()
+
+	// Base config (global)
+	baseConfig := &Config{}
+	baseConfig.Title.Size = 64.0
+	baseConfig.Title.Color = "#000000"
 	baseConfig.Background.Color = "#FFFFFF"
+	baseConfig.Overlay = MainOverlayConfig{
+		Visible: false,
+	}
 
-	// Only override text size
-	newSize := 48.0
+	// Article 1: Has overlay configuration
+	article1Content := "Article 1 Title"
+	article1OverlayImage := "article1-overlay.png"
+	ogpFM1 := &OGPFrontMatter{
+		Title: &TextConfigOverride{
+			Content: &article1Content,
+		},
+		Overlay: &ArticleOverlayConfig{
+			Visible: boolPtr(true),
+			Image:   &article1OverlayImage,
+		},
+	}
 
-	ogpFM := &OGPFrontMatter{}
-	ogpFM.Text = &struct {
-		Content *string  `yaml:"content,omitempty"`
-		Font    *string  `yaml:"font,omitempty"`
-		Size    *float64 `yaml:"size,omitempty"`
-		Color   *string  `yaml:"color,omitempty"` // Hex color code
-		Area    *struct {
-			X      *int `yaml:"x,omitempty"`
-			Y      *int `yaml:"y,omitempty"`
-			Width  *int `yaml:"width,omitempty"`
-			Height *int `yaml:"height,omitempty"`
-		} `yaml:"area,omitempty"`
-		BlockPosition *string  `yaml:"block_position,omitempty"`
-		LineAlignment *string  `yaml:"line_alignment,omitempty"`
-		Overflow      *string  `yaml:"overflow,omitempty"`
-		MinSize       *float64 `yaml:"min_size,omitempty"`
-		LineHeight    *float64 `yaml:"line_height,omitempty"`
-		LetterSpacing *int     `yaml:"letter_spacing,omitempty"`
-		LineBreaking  *struct {
-			StartProhibited *string `yaml:"start_prohibited,omitempty"` // Characters that cannot start a line
-			EndProhibited   *string `yaml:"end_prohibited,omitempty"`   // Characters that cannot end a line
-		} `yaml:"line_breaking,omitempty"`
-	}{
-		Size: &newSize,
+	// Article 2: No overlay configuration, different title
+	article2Content := "Article 2 Title"
+	ogpFM2 := &OGPFrontMatter{
+		Title: &TextConfigOverride{
+			Content: &article2Content,
+		},
+	}
+
+	// Article 3: Different overlay configuration
+	article3Content := "Article 3 Title"
+	article3OverlayImage := "article3-overlay.png"
+	ogpFM3 := &OGPFrontMatter{
+		Title: &TextConfigOverride{
+			Content: &article3Content,
+		},
+		Overlay: &ArticleOverlayConfig{
+			Visible: boolPtr(true),
+			Image:   &article3OverlayImage,
+		},
+	}
+
+	// Process articles in sequence (simulating real usage)
+	result1 := merger.MergeConfigs(baseConfig, ogpFM1)
+	result2 := merger.MergeConfigs(baseConfig, ogpFM2)
+	result3 := merger.MergeConfigs(baseConfig, ogpFM3)
+
+	// Verify Article 1 config
+	if result1.Title.Content == nil || *result1.Title.Content != article1Content {
+		t.Errorf("Article 1 title content incorrect: expected %s, got %v",
+			article1Content, result1.Title.Content)
+	}
+	if !result1.Overlay.Visible {
+		t.Error("Article 1 overlay should be visible")
+	}
+	if result1.Overlay.Image == nil || *result1.Overlay.Image != article1OverlayImage {
+		t.Errorf("Article 1 overlay image incorrect: expected %s, got %v",
+			article1OverlayImage, result1.Overlay.Image)
+	}
+
+	// Verify Article 2 config (should not have overlay from Article 1)
+	if result2.Title.Content == nil || *result2.Title.Content != article2Content {
+		t.Errorf("Article 2 title content incorrect: expected %s, got %v",
+			article2Content, result2.Title.Content)
+	}
+	if result2.Overlay.Visible {
+		t.Error("Article 2 overlay should not be visible (no overlay in front matter)")
+	}
+	if result2.Overlay.Image != nil && *result2.Overlay.Image == article1OverlayImage {
+		t.Error("Article 2 incorrectly inherited overlay image from Article 1")
+	}
+
+	// Verify Article 3 config
+	if result3.Title.Content == nil || *result3.Title.Content != article3Content {
+		t.Errorf("Article 3 title content incorrect: expected %s, got %v",
+			article3Content, result3.Title.Content)
+	}
+	if !result3.Overlay.Visible {
+		t.Error("Article 3 overlay should be visible")
+	}
+	if result3.Overlay.Image == nil || *result3.Overlay.Image != article3OverlayImage {
+		t.Errorf("Article 3 overlay image incorrect: expected %s, got %v",
+			article3OverlayImage, result3.Overlay.Image)
+	}
+
+	// Verify base config remains unchanged
+	if baseConfig.Title.Size != 64.0 {
+		t.Error("Base config was modified during processing")
+	}
+	if baseConfig.Overlay.Visible {
+		t.Error("Base config overlay visibility was modified")
+	}
+}
+
+// Test new helper functions for value copying
+func TestConfigMerger_NewHelperFunctions(t *testing.T) {
+	merger := NewConfigMerger()
+
+	t.Run("mergeStringPtrValue", func(t *testing.T) {
+		source := "source value"
+		var target *string
+
+		merger.mergeStringPtrValue(&target, &source)
+
+		// Target should have the value
+		if target == nil || *target != source {
+			t.Errorf("Expected target to have value %s, got %v", source, target)
+		}
+
+		// Modify source - target should not be affected
+		source = "modified source"
+		if target == nil || *target == "modified source" {
+			t.Error("Target was affected by modifying source")
+		}
+
+		// Test with nil source
+		merger.mergeStringPtrValue(&target, nil)
+		if target == nil || *target != "source value" {
+			t.Error("Target should not change when source is nil")
+		}
+	})
+
+	t.Run("mergeFloat64PtrValue", func(t *testing.T) {
+		source := 42.5
+		var target *float64
+
+		merger.mergeFloat64PtrValue(&target, &source)
+
+		// Target should have the value
+		if target == nil || *target != source {
+			t.Errorf("Expected target to have value %f, got %v", source, target)
+		}
+
+		// Modify source - target should not be affected
+		source = 99.9
+		if target == nil || *target == 99.9 {
+			t.Error("Target was affected by modifying source")
+		}
+
+		// Test with nil source
+		merger.mergeFloat64PtrValue(&target, nil)
+		if target == nil || *target != 42.5 {
+			t.Error("Target should not change when source is nil")
+		}
+	})
+
+	t.Run("mergeIntPtrValue", func(t *testing.T) {
+		source := 123
+		var target *int
+
+		merger.mergeIntPtrValue(&target, &source)
+
+		// Target should have the value
+		if target == nil || *target != source {
+			t.Errorf("Expected target to have value %d, got %v", source, target)
+		}
+
+		// Modify source - target should not be affected
+		source = 456
+		if target == nil || *target == 456 {
+			t.Error("Target was affected by modifying source")
+		}
+
+		// Test with nil source
+		merger.mergeIntPtrValue(&target, nil)
+		if target == nil || *target != 123 {
+			t.Error("Target should not change when source is nil")
+		}
+	})
+}
+
+// Test complex scenario with nested pointer overrides
+func TestConfigMerger_ComplexNestedOverrides(t *testing.T) {
+	merger := NewConfigMerger()
+
+	// Base config with nested structure
+	baseImage := "base-overlay.png"
+	baseFit := "contain"
+	baseOpacity := 0.5
+	baseX := 10
+	baseY := 20
+
+	baseConfig := &Config{}
+	baseConfig.Overlay = MainOverlayConfig{
+		Visible: true,
+		Image:   &baseImage,
+		Fit:     baseFit,
+		Opacity: baseOpacity,
+		Placement: PlacementConfig{
+			X: baseX,
+			Y: baseY,
+		},
+	}
+
+	// Override with nested changes
+	overrideImage := "override-overlay.png"
+	overrideOpacity := 0.8
+	overrideX := 50
+	overrideWidth := 200
+
+	ogpFM := &OGPFrontMatter{
+		Overlay: &ArticleOverlayConfig{
+			Image:   &overrideImage,
+			Opacity: &overrideOpacity,
+			Placement: &PlacementConfig{
+				X:     overrideX,
+				Width: overrideWidth,
+				// Y and Height not specified - should keep base values
+			},
+		},
 	}
 
 	result := merger.MergeConfigs(baseConfig, ogpFM)
 
-	// Size should be overridden
-	if result.Text.Size != newSize {
-		t.Errorf("Expected text size %f, got %f", newSize, result.Text.Size)
+	// Check overridden values
+	if result.Overlay.Image == nil || *result.Overlay.Image != overrideImage {
+		t.Errorf("Expected overlay image %s, got %v", overrideImage, result.Overlay.Image)
+	}
+	if result.Overlay.Opacity != overrideOpacity {
+		t.Errorf("Expected overlay opacity %f, got %f", overrideOpacity, result.Overlay.Opacity)
+	}
+	if result.Overlay.Placement.X != overrideX {
+		t.Errorf("Expected placement X %d, got %d", overrideX, result.Overlay.Placement.X)
+	}
+	if result.Overlay.Placement.Width != overrideWidth {
+		t.Errorf("Expected placement width %d, got %d", overrideWidth, result.Overlay.Placement.Width)
 	}
 
-	// Color and Font should remain from base config
-	if result.Text.Color != baseConfig.Text.Color {
-		t.Errorf("Expected text color %s to remain unchanged, got %s", baseConfig.Text.Color, result.Text.Color)
+	// Check preserved values (should maintain base values for non-overridden fields)
+	if result.Overlay.Fit != baseFit {
+		t.Errorf("Expected fit to remain %s, got %s", baseFit, result.Overlay.Fit)
+	}
+	if result.Overlay.Placement.Y != baseY {
+		t.Errorf("Expected placement Y to remain %d, got %d", baseY, result.Overlay.Placement.Y)
 	}
 
-	if result.Text.Font != baseConfig.Text.Font {
-		t.Errorf("Expected text font %s to remain unchanged, got %s", baseConfig.Text.Font, result.Text.Font)
+	// Check base config isolation
+	if *baseConfig.Overlay.Image != baseImage {
+		t.Errorf("Base config image was modified: expected %s, got %s",
+			baseImage, *baseConfig.Overlay.Image)
 	}
+	if baseConfig.Overlay.Placement.X != baseX {
+		t.Errorf("Base config placement X was modified: expected %d, got %d",
+			baseX, baseConfig.Overlay.Placement.X)
+	}
+}
 
-	// Background should remain unchanged
-	if result.Background.Color != baseConfig.Background.Color {
-		t.Errorf("Expected background color %s to remain unchanged, got %s", baseConfig.Background.Color, result.Background.Color)
-	}
+// Helper function for creating bool pointers
+func boolPtr(b bool) *bool {
+	return &b
 }
