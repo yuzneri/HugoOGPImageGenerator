@@ -94,7 +94,7 @@ jobs:
         GOARCH: ${{ matrix.goarch }}
         CGO_ENABLED: 0
       run: |
-        BINARY_NAME="ogp-${{ matrix.goos }}${{ steps.version.outputs.version }}-${{ matrix.goarch }}${{ matrix.suffix }}"
+        BINARY_NAME="ogp${{ steps.version.outputs.version }}-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }}"
         go build -ldflags="-s -w -X main.version=${{ steps.version.outputs.version }}" -o "$BINARY_NAME" .
         
         if [ "${{ matrix.goos }}" = "windows" ]; then
@@ -106,9 +106,9 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: ogp-${{ matrix.goos }}${{ steps.version.outputs.version }}-${{ matrix.goarch }}
+        name: ogp${{ steps.version.outputs.version }}-${{ matrix.goos }}-${{ matrix.goarch }}
         path: |
-          ogp-${{ matrix.goos }}${{ steps.version.outputs.version }}-${{ matrix.goarch }}*
+          ogp${{ steps.version.outputs.version }}-${{ matrix.goos }}-${{ matrix.goarch }}*
         retention-days: 1
 
   release:
@@ -162,7 +162,7 @@ jobs:
     - name: Create Release
       run: |
         gh release create "${{ steps.version.outputs.version }}" \
-          --title "Hugo OGP Image Generator ${{ steps.version.outputs.version }}" \
+          --title "${{ steps.version.outputs.version }}" \
           --latest \
           release-assets/*
       env:
