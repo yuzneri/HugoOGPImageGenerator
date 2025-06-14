@@ -113,29 +113,6 @@ func TestPathResolver_ResolveAssetPath_EmptyArticlePath(t *testing.T) {
 	}
 }
 
-func TestPathResolver_ResolveConfigAssetPath_AbsolutePath(t *testing.T) {
-	resolver := NewPathResolver("/test/config")
-
-	absPath := "/absolute/path/to/asset.png"
-	result := resolver.ResolveConfigAssetPath(absPath)
-
-	if result != absPath {
-		t.Errorf("Expected absolute path %s, got %s", absPath, result)
-	}
-}
-
-func TestPathResolver_ResolveConfigAssetPath_RelativePath(t *testing.T) {
-	configDir := "/test/config"
-	resolver := NewPathResolver(configDir)
-
-	result := resolver.ResolveConfigAssetPath("asset.png")
-	expected := filepath.Join(configDir, "asset.png")
-
-	if result != expected {
-		t.Errorf("Expected config asset path %s, got %s", expected, result)
-	}
-}
-
 func TestPathResolver_ResolvePath_AbsolutePath(t *testing.T) {
 	resolver := NewPathResolver("/test/config")
 

@@ -65,6 +65,11 @@ func (ir *ImageRenderer) renderSingleText(dst *image.RGBA, font *truetype.Font, 
 	overflow := textConfig.Overflow
 	fontSize := textConfig.Size
 
+	// Validate font size is reasonable to prevent excessive processing
+	if fontSize <= 0 || fontSize > 1000 {
+		return NewValidationError(fmt.Sprintf("invalid font size: %f (must be between 0 and 1000)", fontSize))
+	}
+
 	if area.X == 0 && area.Y == 0 && area.Width == 0 && area.Height == 0 {
 		bounds := dst.Bounds()
 		area.X = DefaultAreaPadding
@@ -133,26 +138,42 @@ func (ir *ImageRenderer) adjustFontSizeToFit(font *truetype.Font, title string, 
 		minFontSize = DefaultMinFontSize
 	}
 
-	for fontSize > minFontSize {
-		lineHeight := int(fontSize * textConfig.LineHeight)
-		totalHeight := len(lines) * lineHeight
+	// Add protection against infinite loops
+	maxIterations := 100
+	iterations := 0
 
-		var maxTextWidth int
-		face := truetype.NewFace(font, &truetype.Options{Size: fontSize})
-		for _, line := range lines {
-			textWidthPx := measureStringWithSpacing(face, line, textConfig.LetterSpacing)
-			if textWidthPx > maxTextWidth {
-				maxTextWidth = textWidthPx
+	// Validate FontSizeShrinkFactor to prevent infinite loops
+	if FontSizeShrinkFactor <= 0 || FontSizeShrinkFactor >= 1.0 {
+		// Use a safe fallback if the constant is invalid
+		fontSize = minFontSize
+	} else {
+		for fontSize > minFontSize && iterations < maxIterations {
+			lineHeight := int(fontSize * textConfig.LineHeight)
+			totalHeight := len(lines) * lineHeight
+
+			var maxTextWidth int
+			face := truetype.NewFace(font, &truetype.Options{Size: fontSize})
+			for _, line := range lines {
+				textWidthPx := measureStringWithSpacing(face, line, textConfig.LetterSpacing)
+				if textWidthPx > maxTextWidth {
+					maxTextWidth = textWidthPx
+				}
 			}
+
+			if totalHeight <= maxHeight && maxTextWidth <= area.Width {
+				break
+			}
+
+			fontSize = fontSize * FontSizeShrinkFactor
+			face = truetype.NewFace(font, &truetype.Options{Size: fontSize})
+			lines = textProcessor.SplitText(title, face, maxWidth)
+			iterations++
 		}
 
-		if totalHeight <= maxHeight && maxTextWidth <= area.Width {
-			break
+		// Ensure minimum font size is respected
+		if fontSize < minFontSize {
+			fontSize = minFontSize
 		}
-
-		fontSize = fontSize * FontSizeShrinkFactor
-		face = truetype.NewFace(font, &truetype.Options{Size: fontSize})
-		lines = textProcessor.SplitText(title, face, maxWidth)
 	}
 
 	face := truetype.NewFace(font, &truetype.Options{Size: fontSize})

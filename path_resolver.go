@@ -38,14 +38,6 @@ func (pr *PathResolver) ResolveAssetPath(assetPath string, articlePath string) s
 	return filepath.Join(pr.configDir, assetPath)
 }
 
-// ResolveConfigAssetPath resolves asset paths relative to the config directory only.
-func (pr *PathResolver) ResolveConfigAssetPath(assetPath string) string {
-	if filepath.IsAbs(assetPath) {
-		return assetPath
-	}
-	return filepath.Join(pr.configDir, assetPath)
-}
-
 // ResolvePath resolves a relative path against a base path.
 func (pr *PathResolver) ResolvePath(basePath, relativePath string) string {
 	if filepath.IsAbs(relativePath) {

@@ -28,8 +28,27 @@ func main() {
 	var contentDir string
 	if cli.Mode == "--test" {
 		// testモードでは記事パスから contentDir を推測
-		cwd, _ := os.Getwd()
-		contentDir = filepath.Join(cwd, "test_content")
+		// 記事パスから遡って content ディレクトリを探す
+		dir := filepath.Dir(cli.ArticlePath)
+		contentDir = ""
+		for {
+			if filepath.Base(dir) == ContentDirectory {
+				contentDir = dir
+				break
+			}
+			parent := filepath.Dir(dir)
+			if parent == dir {
+				// ルートに到達
+				break
+			}
+			dir = parent
+		}
+
+		// content ディレクトリが見つからない場合は、現在のディレクトリを使用
+		if contentDir == "" {
+			cwd, _ := os.Getwd()
+			contentDir = filepath.Join(cwd, "test_content")
+		}
 	} else {
 		contentDir = filepath.Join(cli.ProjectRoot, ContentDirectory)
 	}

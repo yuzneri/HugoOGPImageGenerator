@@ -71,7 +71,7 @@ func (fm *FontManager) getDefaultFont() (*truetype.Font, error) {
 
 	fontPath := fm.findSystemFont()
 	if fontPath == "" {
-		return nil, fmt.Errorf("no suitable system font found")
+		return nil, NewFontError("load", "system font", fmt.Errorf("no suitable system font found"))
 	}
 
 	fontBytes, err := os.ReadFile(fontPath)

@@ -39,7 +39,7 @@ func findProjectRoot(startDir string) (string, error) {
 		dir = parent
 	}
 
-	return "", fmt.Errorf("Hugo project root not found (no content and static directories found)")
+	return "", NewValidationError("Hugo project root not found (no content and static directories found)")
 }
 
 // listArticles displays all available articles with their titles and OGP settings.
@@ -185,7 +185,7 @@ func parseConfigFlag(args []string) (configPath string, remainingArgs []string) 
 // parseArgs parses command-line arguments and returns a CLIArgs structure.
 func parseArgs(args []string) (*CLIArgs, error) {
 	if len(args) < 2 {
-		return nil, fmt.Errorf("insufficient arguments")
+		return nil, NewValidationError("insufficient arguments")
 	}
 
 	// Extract --config flag from all arguments
@@ -207,7 +207,7 @@ func parseArgs(args []string) (*CLIArgs, error) {
 		return cli, nil
 	} else if filteredArgs[1] == "--single" {
 		if len(filteredArgs) < 4 {
-			return nil, fmt.Errorf("--single mode requires project-root and article-path")
+			return nil, NewValidationError("--single mode requires project-root and article-path")
 		}
 
 		cli.Mode = filteredArgs[1]
@@ -215,7 +215,7 @@ func parseArgs(args []string) (*CLIArgs, error) {
 		cli.ArticlePath = filteredArgs[3]
 	} else if filteredArgs[1] == "--test" {
 		if len(filteredArgs) < 3 {
-			return nil, fmt.Errorf("--test mode requires article-path")
+			return nil, NewValidationError("--test mode requires article-path")
 		}
 
 		cli.Mode = filteredArgs[1]
@@ -226,7 +226,7 @@ func parseArgs(args []string) (*CLIArgs, error) {
 		cli.ProjectRoot = "" // testモードではプロジェクトルート不要
 	} else if filteredArgs[1] == "--list" {
 		if len(filteredArgs) < 3 {
-			return nil, fmt.Errorf("--list mode requires project-root")
+			return nil, NewValidationError("--list mode requires project-root")
 		}
 
 		cli.Mode = filteredArgs[1]

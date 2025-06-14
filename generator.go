@@ -35,7 +35,7 @@ func NewOGPGenerator(configPath, contentDir, projectRoot string) (*OGPGenerator,
 	bgProcessor := NewBackgroundProcessor(configDir)
 	imageRenderer := NewImageRenderer()
 
-	articleProcessor := NewArticleProcessor(config, contentDir, configDir, fontManager, bgProcessor, imageRenderer)
+	articleProcessor := NewArticleProcessor(config, contentDir, configDir, configPath, fontManager, bgProcessor, imageRenderer)
 
 	return &OGPGenerator{
 		config:           config,
@@ -138,12 +138,12 @@ func (g *OGPGenerator) GenerateSingle(articlePath string) error {
 	}
 
 	if _, err := os.Stat(fullArticlePath); os.IsNotExist(err) {
-		return fmt.Errorf("article directory not found: %s", fullArticlePath)
+		return NewFileError("stat", fullArticlePath, err)
 	}
 
 	indexPath := filepath.Join(fullArticlePath, DefaultIndexFilename)
 	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
-		return fmt.Errorf("%s not found in: %s", DefaultIndexFilename, fullArticlePath)
+		return NewFileError("stat", indexPath, err)
 	}
 
 	fmt.Printf("Generating OGP image for: %s\n", articlePath)
@@ -157,12 +157,12 @@ func (g *OGPGenerator) GenerateTest(articlePath string) error {
 	fullArticlePath := articlePath
 
 	if _, err := os.Stat(fullArticlePath); os.IsNotExist(err) {
-		return fmt.Errorf("article directory not found: %s", fullArticlePath)
+		return NewFileError("stat", fullArticlePath, err)
 	}
 
 	indexPath := filepath.Join(fullArticlePath, DefaultIndexFilename)
 	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
-		return fmt.Errorf("%s not found in: %s", DefaultIndexFilename, fullArticlePath)
+		return NewFileError("stat", indexPath, err)
 	}
 
 	fmt.Printf("Testing OGP image for: %s\n", articlePath)

@@ -14,11 +14,11 @@ import (
 	"github.com/disintegration/imaging"
 )
 
-// resolveAssetPath resolves asset paths (fonts, images) relative to config directory.
-// It uses the same path resolution logic as font files for consistency.
-func resolveAssetPath(assetPath, configDir string) string {
+// resolveAssetPath resolves asset paths (fonts, images) with fallback from article to config directory.
+// It uses the same path resolution logic as font and background files for consistency.
+func resolveAssetPath(assetPath, configDir, articlePath string) string {
 	resolver := NewPathResolver(configDir)
-	return resolver.ResolveConfigAssetPath(assetPath)
+	return resolver.ResolveAssetPath(assetPath, articlePath)
 }
 
 // loadImage loads an image from the filesystem, supporting JPEG and PNG formats.
@@ -26,7 +26,7 @@ func resolveAssetPath(assetPath, configDir string) string {
 func loadImage(imagePath string) (image.Image, error) {
 	file, err := os.Open(imagePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open image: %w", err)
+		return nil, NewFileError("open", imagePath, err)
 	}
 	defer file.Close()
 
@@ -125,33 +125,21 @@ type OverlaySettings interface {
 
 // compositeCustomImage composites an overlay image with full configuration support.
 // It handles path resolution, resizing, cropping (for cover fit), and alpha blending.
-// The isConfigOverlay parameter determines whether to use config-relative or article-relative paths.
+// All overlay images now use unified asset resolution: article directory first, then config directory.
 func compositeCustomImage(dst *image.RGBA, basePath string, overlaySettings OverlaySettings, isConfigOverlay bool, configDir string) error {
 	var imagePath string
 	imagePtr := overlaySettings.GetImage()
 	if imagePtr == nil {
-		return fmt.Errorf("overlay image is nil")
+		return NewValidationError("overlay image is nil")
 	}
-	if isConfigOverlay {
-		// For config overlays, use the same path resolution as fonts/background images
-		imagePath = resolveAssetPath(*imagePtr, configDir)
-	} else {
-		// For front matter overlays, try article directory first, then config directory
-		if filepath.IsAbs(*imagePtr) {
-			imagePath = *imagePtr
-		} else {
-			articleImagePath := filepath.Join(basePath, *imagePtr)
-			if _, err := os.Stat(articleImagePath); err == nil {
-				imagePath = articleImagePath
-			} else {
-				imagePath = resolveAssetPath(*imagePtr, configDir)
-			}
-		}
-	}
+
+	// Unified asset resolution for all overlay images (config and front matter)
+	// Use the same path resolution logic as fonts and background images
+	imagePath = resolveAssetPath(*imagePtr, configDir, basePath)
 
 	img, err := loadImage(imagePath)
 	if err != nil {
-		return fmt.Errorf("failed to load image %s: %w", imagePath, err)
+		return NewImageError("load", imagePath, err)
 	}
 
 	x, y := 0, 0
@@ -206,6 +194,11 @@ func compositeCustomImage(dst *image.RGBA, basePath string, overlaySettings Over
 		resizedHeight := resizedBounds.Dy()
 
 		if resizedWidth > width || resizedHeight > height {
+			// Validate dimensions to prevent excessive memory allocation
+			if width <= 0 || height <= 0 || width > 10000 || height > 10000 {
+				return NewValidationError(fmt.Sprintf("invalid image dimensions: %dx%d", width, height))
+			}
+
 			cropX := (resizedWidth - width) / 2
 			cropY := (resizedHeight - height) / 2
 

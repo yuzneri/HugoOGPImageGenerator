@@ -12,20 +12,21 @@ import (
 
 // TextConfig represents configuration for a single text element (title or description).
 // It contains all settings for fonts, text rendering, and line breaking for that text.
+// TextConfig represents a complete text configuration with all fields having values (runtime use)
 type TextConfig struct {
 	// Rendering control
-	Visible bool `yaml:"visible"` // Whether to render this text element (default: true)
+	Visible bool `yaml:"visible"` // Whether to render this text element
 	// Content configuration
-	Content *string `yaml:"content,omitempty"` // Default content template (optional)
+	Content *string `yaml:"content"` // Content template (nil means use template)
 	// Font configuration
-	Font *string `yaml:"font,omitempty"` // Path to font file (optional, auto-detect if omitted)
-	Size float64 `yaml:"size"`           // Default font size
-	// Text color configuration (supports hex color codes)
-	Color string `yaml:"color"` // Hex color code (e.g., "#FF00FF", "#ff00ff80")
+	Font *string `yaml:"font"` // Path to font file (nil means auto-detect)
+	Size float64 `yaml:"size"` // Font size
+	// Text color configuration
+	Color string `yaml:"color"` // Hex color code
 	// Text rendering area coordinates
 	Area          TextArea `yaml:"area"`
-	BlockPosition string   `yaml:"block_position"` // Text block position in area (e.g., "middle-center")
-	LineAlignment string   `yaml:"line_alignment"` // Individual line alignment within block ("left", "center", "right")
+	BlockPosition string   `yaml:"block_position"` // Text block position in area
+	LineAlignment string   `yaml:"line_alignment"` // Individual line alignment within block
 	Overflow      string   `yaml:"overflow"`       // Overflow handling ("shrink" or "clip")
 	MinSize       float64  `yaml:"min_size"`       // Minimum font size for shrink mode
 	LineHeight    float64  `yaml:"line_height"`    // Line height multiplier
@@ -65,8 +66,30 @@ func (f *ArticleOverlayConfig) GetImage() *string {
 }
 
 // GetPlacement implements OverlaySettings interface
+// NOTE: ArticleOverlayConfig should not be used for rendering, only for configuration merging
 func (f *ArticleOverlayConfig) GetPlacement() *PlacementConfig {
-	return f.Placement
+	// This method should not be called in normal operation
+	// ArticleOverlayConfig is for configuration merging, not for rendering
+	if f.Placement == nil {
+		return nil
+	}
+	// Convert PlacementSettings to PlacementConfig for interface compatibility
+	// IMPORTANT: Preserve all explicitly specified values, including zero
+	return &PlacementConfig{
+		X:      valueOrDefault(f.Placement.X, 0),
+		Y:      valueOrDefault(f.Placement.Y, 0),
+		Width:  f.Placement.Width,
+		Height: f.Placement.Height,
+	}
+}
+
+// valueOrDefault returns the value pointed to by ptr, or defaultValue if ptr is nil
+// IMPORTANT: If ptr is non-nil, the pointed value is used even if it's zero
+func valueOrDefault(ptr *int, defaultValue int) int {
+	if ptr == nil {
+		return defaultValue
+	}
+	return *ptr // 明示的に指定された値（0を含む）をそのまま使用
 }
 
 // GetFit implements OverlaySettings interface
@@ -128,7 +151,7 @@ func parseHexColor(hex string) (color.RGBA, error) {
 			A: uint8(val),
 		}, nil
 	default:
-		return color.RGBA{}, fmt.Errorf("invalid hex color format: %s (expected 6 or 8 characters)", hex)
+		return color.RGBA{}, NewValidationError(fmt.Sprintf("invalid hex color format: %s (expected 6 or 8 characters)", hex))
 	}
 }
 
@@ -243,6 +266,46 @@ func setDefaultOverlay(config *Config) {
 
 // loadConfig reads and parses a YAML configuration file.
 // If the file doesn't exist or fields are missing, defaults are applied.
+// loadConfigWithSettings loads configuration using ConfigSettings approach.
+func loadConfigWithSettings(configPath string) (*Config, error) {
+	// Start with default configuration
+	config := getDefaultConfig()
+
+	// Try to read config file as settings
+	configSettings, err := loadConfigSettings(configPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// Apply settings to default config if settings were loaded
+	if configSettings != nil {
+		merger := NewConfigMerger()
+		merger.applySettingsToConfig(config, configSettings)
+	}
+
+	return config, nil
+}
+
+// loadConfigSettings loads ConfigSettings from a file.
+// Returns nil if the file doesn't exist (not an error).
+func loadConfigSettings(configPath string) (*ConfigSettings, error) {
+	// Try to read config file
+	configBytes, err := os.ReadFile(configPath)
+	if err != nil {
+		// If config file doesn't exist, return nil (not an error)
+		return nil, nil
+	}
+
+	// Parse the config file
+	var settings ConfigSettings
+	err = yaml.Unmarshal(configBytes, &settings)
+	if err != nil {
+		return nil, NewConfigError("failed to unmarshal config", err)
+	}
+
+	return &settings, nil
+}
+
 func loadConfig(configPath string) (*Config, error) {
 	// Start with default configuration
 	config := getDefaultConfig()
@@ -257,7 +320,7 @@ func loadConfig(configPath string) (*Config, error) {
 	// Parse the config file and merge with defaults
 	err = yaml.Unmarshal(configBytes, config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+		return nil, NewConfigError("failed to unmarshal config", err)
 	}
 
 	return config, nil

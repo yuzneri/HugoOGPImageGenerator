@@ -27,8 +27,14 @@ It processes Hugo content with front matter and creates custom social media prev
 
 ## Configuration
 
-The application uses YAML configuration files with comprehensive default values.
-All configuration options can be overridden per-article via Hugo front matter.
+The application uses a 4-level configuration hierarchy with comprehensive default values:
+
+1. **Default Configuration** - Built-in sensible defaults
+2. **Global Configuration** - `config.yaml` file settings
+3. **Type-Specific Configuration** - Content type-based settings
+4. **Front Matter Overrides** - Per-article customizations
+
+Each level can override any setting from the previous levels, allowing for fine-grained control while maintaining consistent defaults.
 
 ### Default Values
 
@@ -269,6 +275,201 @@ overlay:
   opacity: 0.9
 ```
 
+### Type-Specific Configuration
+
+Create configuration files for different content types to apply consistent styling across all content of that type. The content type is automatically detected from the Hugo directory structure.
+
+#### Content Type Detection
+
+The content type is determined using Hugo's standard type detection with the following priority:
+
+1. **Hugo's native `type` field in front matter** (highest priority)
+2. **Directory path within Hugo's `content/` directory** (fallback)
+3. **Default to `"page"`** (if neither above applies)
+
+**Front matter type field example:**
+```yaml
+---
+title: "Special Article"
+description: "Custom content type"
+type: "featured"        # ← Explicit type override
+---
+```
+
+**Directory-based type detection:**
+```
+content/
+├── about.md           → type: "page"  
+├── posts/
+│   └── article1.md    → type: "posts"
+├── books/
+│   └── book1/
+│       └── index.md   → type: "books"
+└── tutorials/
+    └── tutorial1.md   → type: "tutorials"
+```
+
+The front matter `type` field takes precedence over directory structure, allowing you to override the default directory-based type for specific articles.
+
+#### Type Configuration Files
+
+Create type-specific configuration files in your config directory using the pattern `{type}.yaml`:
+
+**books.yaml** - Configuration for all book content:
+```yaml
+title:
+  visible: true
+  size: 72
+  color: "#2C3E50"
+  area:
+    x: 460
+    y: 100
+    width: 710
+    height: 370
+  block_position: "top-center"
+  line_alignment: "center"
+
+description:
+  visible: false
+
+overlay:
+  visible: true
+  image: "cover.jpg"           # Look for cover.jpg with priority: 1) article directory 2) config directory
+  placement:
+    x: 50
+    y: 50
+    height: 580                # Fixed height, auto-width
+  fit: "contain"
+  opacity: 1.0
+
+background:
+  color: "#F8F9FA"
+```
+
+**posts.yaml** - Configuration for blog posts:
+```yaml
+title:
+  visible: true
+  size: 64
+  color: "#1A202C"
+  area:
+    x: 100
+    y: 80
+    width: 1000
+    height: 200
+
+description:
+  visible: true
+  content: "{{.Description}} - {{.Fields.author | default \"Blog\"}}"
+  size: 28
+  color: "#718096"
+  area:
+    x: 100
+    y: 300
+    width: 1000
+    height: 150
+
+overlay:
+  visible: false
+
+background:
+  color: "#FFFFFF"
+```
+
+**tutorials.yaml** - Configuration for tutorial content:
+```yaml
+title:
+  visible: true
+  content: "Tutorial: {{.Title}}"
+  size: 56
+  color: "#2B6CB0"
+  
+description:
+  visible: true
+  content: "Step-by-step guide"
+  size: 24
+  color: "#4A5568"
+
+overlay:
+  visible: true
+  image: "tutorial-badge.png"   # Common badge for all tutorials
+  placement:
+    x: 950
+    y: 50
+    width: 200
+    height: 100
+  fit: "contain"
+```
+
+#### Partial Configuration Support
+
+Type configurations support partial settings - you only need to specify the values you want to change from the defaults:
+
+**minimal-books.yaml**:
+```yaml
+# Only override specific values
+title:
+  color: "#8B5CF6"            # Purple title for books
+  area:
+    x: 400                    # Move title to the right
+    
+overlay:
+  visible: true
+  placement:
+    height: 500              # Only set height, X/Y/width inherited from defaults
+```
+
+This partial configuration will:
+- Change title color to purple
+- Move title area X position to 400 (Y, width, height remain as defaults)
+- Enable overlay visibility  
+- Set overlay height to 500 (X, Y, width remain as defaults)
+
+#### Type Configuration Examples by Use Case
+
+**E-commerce Products**:
+```yaml
+# product.yaml
+title:
+  content: "{{.Title | upper}}"
+  color: "#E53E3E"
+  
+description:
+  content: "Price: {{.Fields.price | default \"Contact for pricing\"}}"
+  
+overlay:
+  image: "product-badge.png"
+```
+
+**Documentation Pages**:
+```yaml
+# docs.yaml  
+title:
+  content: "📖 {{.Title}}"
+  color: "#2D3748"
+  
+description:
+  content: "{{.Fields.category | default \"Documentation\"}} | {{.Description}}"
+  
+background:
+  color: "#F7FAFC"
+```
+
+**Event Announcements**:
+```yaml
+# events.yaml
+title:
+  content: "🎉 {{.Title}}"
+  size: 68
+  color: "#9F7AEA"
+  
+description:
+  content: "{{dateFormat \"January 2, 2006\" .Date}} | {{.Description}}"
+  
+background:
+  image: "event-bg.jpg"
+```
+
 ### Front Matter Overrides
 
 Override any configuration setting per article:
@@ -358,8 +559,21 @@ Content templates support Hugo-compatible functions:
 ## Path Resolution
 
 ### Asset Paths
-- **Config file**: Paths are relative to the config file directory
-- **Front matter**: Paths are relative to the article directory first, then fall back to config directory
+
+The system uses a 2-tier priority system for finding asset files (images, fonts):
+
+1. **Article directory** (highest priority) - `{article-directory}/{asset-path}`
+2. **Config directory** (fallback) - `{config-directory}/{asset-path}`
+
+**Priority examples:**
+- For `cover.jpg`: First check `content/books/book1/cover.jpg`, then `config/cover.jpg`
+- For `images/logo.png`: First check `content/posts/article/images/logo.png`, then `config/images/logo.png`
+- **Absolute paths**: Used directly without any resolution
+
+**Unified behavior for all contexts:**
+- **All asset types** (background images, fonts, overlay images): Use the 2-tier priority system
+- **Type/Global config files**: Assets search article directory first, then config directory
+- **Front matter overrides**: Assets use the same 2-tier system (article → config)
 - **Font auto-detection**: When font path is omitted, the system automatically detects Japanese fonts
 
 ### Output Paths

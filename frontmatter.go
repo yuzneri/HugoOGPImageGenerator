@@ -14,6 +14,7 @@ type FrontMatter struct {
 	Date        interface{}            `yaml:"date"`          // Publication date (can be string or time.Time)
 	Description string                 `yaml:"description"`   // Article description
 	Tags        []string               `yaml:"tags"`          // Article tags
+	Type        string                 `yaml:"type"`          // Hugo content type
 	URL         string                 `yaml:"url"`           // Custom URL (overrides default)
 	OGP         *OGPFrontMatter        `yaml:"ogp,omitempty"` // OGP-specific settings
 	Fields      map[string]interface{} `yaml:",inline"`       // Additional fields for template access

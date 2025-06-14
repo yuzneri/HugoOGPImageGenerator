@@ -24,8 +24,17 @@ func TestConfigMerger_MergeConfigs_NilOGPFrontMatter(t *testing.T) {
 
 	result := merger.MergeConfigs(baseConfig, nil)
 
-	if result != baseConfig {
-		t.Error("MergeConfigs should return baseConfig when ogpFM is nil")
+	// Should be a copy of baseConfig, not the same pointer
+	if result == baseConfig {
+		t.Error("MergeConfigs should return a new config instance")
+	}
+
+	// Verify the values are the same
+	if result.Title.Size != baseConfig.Title.Size {
+		t.Errorf("Expected title size %f, got %f", baseConfig.Title.Size, result.Title.Size)
+	}
+	if result.Title.Color != baseConfig.Title.Color {
+		t.Errorf("Expected title color %s, got %s", baseConfig.Title.Color, result.Title.Color)
 	}
 }
 
@@ -423,9 +432,9 @@ func TestConfigMerger_OverlayConfiguration(t *testing.T) {
 		Image:   &overlayImage,
 		Opacity: &opacity,
 		Fit:     &fit,
-		Placement: &PlacementConfig{
-			X: x,
-			Y: y,
+		Placement: &PlacementSettings{
+			X: &x,
+			Y: &y,
 		},
 	}
 
@@ -701,6 +710,16 @@ func TestConfigMerger_DeepNestedPointerIsolation(t *testing.T) {
 	}
 }
 
+// Helper function for creating string pointers in tests
+func stringPtr(s string) *string {
+	return &s
+}
+
+// Helper function for creating float64 pointers in tests
+func float64Ptr(f float64) *float64 {
+	return &f
+}
+
 // Test multi-article processing isolation
 func TestConfigMerger_MultiArticleIsolation(t *testing.T) {
 	merger := NewConfigMerger()
@@ -910,8 +929,8 @@ func TestConfigMerger_ComplexNestedOverrides(t *testing.T) {
 		Overlay: &ArticleOverlayConfig{
 			Image:   &overrideImage,
 			Opacity: &overrideOpacity,
-			Placement: &PlacementConfig{
-				X:     overrideX,
+			Placement: &PlacementSettings{
+				X:     &overrideX,
 				Width: &overrideWidth,
 				// Y and Height not specified - should keep base values
 			},

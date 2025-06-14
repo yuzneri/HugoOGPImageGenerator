@@ -58,10 +58,11 @@ This is the content of the test article.
 	config.Description.Size = DefaultDescriptionFontSize
 
 	// Create processors
+	configPath := filepath.Join(configDir, "config.yaml")
 	fontManager := NewFontManager(configDir)
 	bgProcessor := NewBackgroundProcessor(configDir)
 	imageRenderer := NewImageRenderer()
-	articleProcessor := NewArticleProcessor(config, contentDir, configDir, fontManager, bgProcessor, imageRenderer)
+	articleProcessor := NewArticleProcessor(config, contentDir, configDir, configPath, fontManager, bgProcessor, imageRenderer)
 
 	// Test processing in test mode
 	options := ProcessOptions{TestMode: true}
@@ -155,7 +156,7 @@ func TestErrorHandling_Integration(t *testing.T) {
 	config := getDefaultConfig()
 	config.Background.Image = StringPtr("nonexistent.png")
 
-	articleProcessor := NewArticleProcessor(config, "/nonexistent", "/nonexistent", fontManager, bgProcessor, imageRenderer)
+	articleProcessor := NewArticleProcessor(config, "/nonexistent", "/nonexistent", "/nonexistent/config.yaml", fontManager, bgProcessor, imageRenderer)
 
 	// Test that errors propagate correctly
 	err := articleProcessor.ProcessArticle("/nonexistent/article", ProcessOptions{TestMode: true})
