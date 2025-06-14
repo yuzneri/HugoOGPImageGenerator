@@ -8,40 +8,6 @@ import (
 	"strings"
 )
 
-// findProjectRoot searches for a Hugo project root by looking for content and static directories.
-func findProjectRoot(startDir string) (string, error) {
-	dir := startDir
-	for {
-		// contentとstaticフォルダの存在をチェック
-		contentDir := filepath.Join(dir, ContentDirectory)
-		staticDir := filepath.Join(dir, StaticDirectory)
-
-		contentExists := false
-		staticExists := false
-
-		if _, err := os.Stat(contentDir); err == nil {
-			contentExists = true
-		}
-		if _, err := os.Stat(staticDir); err == nil {
-			staticExists = true
-		}
-
-		if contentExists && staticExists {
-			return dir, nil
-		}
-
-		// 親ディレクトリに移動
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			// ルートディレクトリに到達
-			break
-		}
-		dir = parent
-	}
-
-	return "", NewValidationError("Hugo project root not found (no content and static directories found)")
-}
-
 // listArticles displays all available articles with their titles and OGP settings.
 func listArticles(contentDir string) error {
 	fmt.Println("Available articles:")

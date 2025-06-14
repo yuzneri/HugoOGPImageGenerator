@@ -266,25 +266,6 @@ func setDefaultOverlay(config *Config) {
 
 // loadConfig reads and parses a YAML configuration file.
 // If the file doesn't exist or fields are missing, defaults are applied.
-// loadConfigWithSettings loads configuration using ConfigSettings approach.
-func loadConfigWithSettings(configPath string) (*Config, error) {
-	// Start with default configuration
-	config := getDefaultConfig()
-
-	// Try to read config file as settings
-	configSettings, err := loadConfigSettings(configPath)
-	if err != nil {
-		return nil, err
-	}
-
-	// Apply settings to default config if settings were loaded
-	if configSettings != nil {
-		merger := NewConfigMerger()
-		merger.applySettingsToConfig(config, configSettings)
-	}
-
-	return config, nil
-}
 
 // loadConfigSettings loads ConfigSettings from a file.
 // Returns nil if the file doesn't exist (not an error).

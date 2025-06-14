@@ -1,6 +1,9 @@
 package main
 
 import (
+	"image"
+	"image/color"
+	"image/jpeg"
 	"os"
 	"path/filepath"
 	"testing"
@@ -25,14 +28,14 @@ func TestUnifiedAssetResolution(t *testing.T) {
 
 	// Create article-specific cover.jpg
 	articleCoverPath := filepath.Join(articleDir, "cover.jpg")
-	err = os.WriteFile(articleCoverPath, []byte("article cover content"), 0644)
+	err = createTestJPEG(articleCoverPath, color.RGBA{255, 0, 0, 255}) // Red image
 	if err != nil {
 		t.Fatalf("Failed to create article cover: %v", err)
 	}
 
 	// Create config-level cover.jpg
 	configCoverPath := filepath.Join(configDir, "cover.jpg")
-	err = os.WriteFile(configCoverPath, []byte("config cover content"), 0644)
+	err = createTestJPEG(configCoverPath, color.RGBA{0, 255, 0, 255}) // Green image
 	if err != nil {
 		t.Fatalf("Failed to create config cover: %v", err)
 	}
@@ -112,14 +115,14 @@ func TestAssetResolutionWithTypeConfig(t *testing.T) {
 
 	// Create article-specific assets
 	articleCoverPath := filepath.Join(articleDir, "cover.jpg")
-	err = os.WriteFile(articleCoverPath, []byte("book1 cover"), 0644)
+	err = createTestJPEG(articleCoverPath, color.RGBA{0, 0, 255, 255}) // Blue image
 	if err != nil {
 		t.Fatalf("Failed to create article cover: %v", err)
 	}
 
 	// Create config-level assets
 	configCoverPath := filepath.Join(configDir, "cover.jpg")
-	err = os.WriteFile(configCoverPath, []byte("default cover"), 0644)
+	err = createTestJPEG(configCoverPath, color.RGBA{255, 255, 0, 255}) // Yellow image
 	if err != nil {
 		t.Fatalf("Failed to create config cover: %v", err)
 	}
@@ -160,4 +163,27 @@ func TestAssetResolutionWithTypeConfig(t *testing.T) {
 			t.Errorf("Expected article-specific cover %s, got %s", articleCoverPath, resolvedPath)
 		}
 	})
+}
+
+// createTestJPEG creates a test JPEG file with the specified color
+func createTestJPEG(filename string, c color.RGBA) error {
+	// Create a simple 100x100 image
+	img := image.NewRGBA(image.Rect(0, 0, 100, 100))
+
+	// Fill the image with the specified color
+	for y := 0; y < 100; y++ {
+		for x := 0; x < 100; x++ {
+			img.Set(x, y, c)
+		}
+	}
+
+	// Create the file
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// Encode as JPEG
+	return jpeg.Encode(file, img, nil)
 }

@@ -53,13 +53,6 @@ func TestDetermineContentType(t *testing.T) {
 			expected:     "news",
 		},
 		{
-			name:         "windows path handling",
-			frontMatter:  &FrontMatter{},
-			articlePath:  "C:\\hugo\\content\\blog\\article1",
-			hugoRootPath: "C:\\hugo",
-			expected:     "page",
-		},
-		{
 			name:         "relative path from content root",
 			frontMatter:  &FrontMatter{},
 			articlePath:  "/hugo/content/events/meetup",

@@ -290,10 +290,10 @@ func (cm *ConfigMerger) mergeTextConfigOverride(config *TextConfig, override *Te
 		config.Visible = *override.Visible
 	}
 	if override.Content != nil {
-		config.Content = override.Content
+		config.Content = cm.copyStringPtr(override.Content)
 	}
 	if override.Font != nil {
-		config.Font = override.Font
+		config.Font = cm.copyStringPtr(override.Font)
 	}
 	if override.Size != nil {
 		config.Size = *override.Size
