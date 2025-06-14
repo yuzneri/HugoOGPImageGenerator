@@ -334,11 +334,11 @@ description:
 
 overlay:
   visible: true
-  image: "cover.jpg"           # Look for cover.jpg with priority: 1) article directory 2) config directory
+  image: "cover.jpg"
   placement:
     x: 50
     y: 50
-    height: 580                # Fixed height, auto-width
+    height: 580
   fit: "contain"
   opacity: 1.0
 
@@ -392,7 +392,7 @@ description:
 
 overlay:
   visible: true
-  image: "tutorial-badge.png"   # Common badge for all tutorials
+  image: "tutorial-badge.png"
   placement:
     x: 950
     y: 50
@@ -424,51 +424,6 @@ This partial configuration will:
 - Move title area X position to 400 (Y, width, height remain as defaults)
 - Enable overlay visibility  
 - Set overlay height to 500 (X, Y, width remain as defaults)
-
-#### Type Configuration Examples by Use Case
-
-**E-commerce Products**:
-```yaml
-# product.yaml
-title:
-  content: "{{.Title | upper}}"
-  color: "#E53E3E"
-  
-description:
-  content: "Price: {{.Fields.price | default \"Contact for pricing\"}}"
-  
-overlay:
-  image: "product-badge.png"
-```
-
-**Documentation Pages**:
-```yaml
-# docs.yaml  
-title:
-  content: "📖 {{.Title}}"
-  color: "#2D3748"
-  
-description:
-  content: "{{.Fields.category | default \"Documentation\"}} | {{.Description}}"
-  
-background:
-  color: "#F7FAFC"
-```
-
-**Event Announcements**:
-```yaml
-# events.yaml
-title:
-  content: "🎉 {{.Title}}"
-  size: 68
-  color: "#9F7AEA"
-  
-description:
-  content: "{{dateFormat \"January 2, 2006\" .Date}} | {{.Description}}"
-  
-background:
-  image: "event-bg.jpg"
-```
 
 ### Front Matter Overrides
 
@@ -503,10 +458,10 @@ ogp:
       height: 150
   background:
     color: "#F0F0F0"
-    image: "custom-bg.jpg"  # Relative to article directory
+    image: "custom-bg.jpg"
   overlay:
     visible: true
-    image: "article-overlay.png"  # Relative to article directory
+    image: "article-overlay.png"
     placement:
       x: 900
       y: 50
@@ -518,9 +473,6 @@ ogp:
     filename: "custom-{{.Title}}.{{.Format}}"
 ---
 ```
-
-**Note:** Image paths in front matter are resolved relative to the article directory first.
-If not found, they fall back to paths relative to the config directory.
 
 ## Template Functions
 
@@ -560,21 +512,18 @@ Content templates support Hugo-compatible functions:
 
 ### Asset Paths
 
-The system uses a 2-tier priority system for finding asset files (images, fonts):
+All assets (images, fonts) are resolved using a simple priority system:
 
-1. **Article directory** (highest priority) - `{article-directory}/{asset-path}`
-2. **Config directory** (fallback) - `{config-directory}/{asset-path}`
+1. **Article directory first** - `{article-directory}/{asset-path}`
+2. **Config directory second** - `{config-directory}/{asset-path}`
 
-**Priority examples:**
-- For `cover.jpg`: First check `content/books/book1/cover.jpg`, then `config/cover.jpg`
-- For `images/logo.png`: First check `content/posts/article/images/logo.png`, then `config/images/logo.png`
-- **Absolute paths**: Used directly without any resolution
+**Examples:**
+- `cover.jpg` → `content/books/book1/cover.jpg` then `config/cover.jpg`
+- `images/logo.png` → `content/posts/article/images/logo.png` then `config/images/logo.png`
+- Absolute paths are used directly
 
-**Unified behavior for all contexts:**
-- **All asset types** (background images, fonts, overlay images): Use the 2-tier priority system
-- **Type/Global config files**: Assets search article directory first, then config directory
-- **Front matter overrides**: Assets use the same 2-tier system (article → config)
-- **Font auto-detection**: When font path is omitted, the system automatically detects Japanese fonts
+This applies to all asset references regardless of where they're defined (global config, type config, or front matter). 
+Japanese fonts are auto-detected when no font path is specified.
 
 ### Output Paths
 - **Default**: `{output.directory}/{article-path}/ogp.{format}`
