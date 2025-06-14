@@ -277,153 +277,28 @@ overlay:
 
 ### Type-Specific Configuration
 
-Create configuration files for different content types to apply consistent styling across all content of that type. The content type is automatically detected from the Hugo directory structure.
+Create `{type}.yaml` files to apply consistent styling by content type. Content types are determined by:
 
-#### Content Type Detection
+1. **Front matter `type` field** (priority) 
+2. **Directory path** (`content/posts/` → type "posts")
+3. **Default** ("page")
 
-The content type is determined using Hugo's standard type detection with the following priority:
-
-1. **Hugo's native `type` field in front matter** (highest priority)
-2. **Directory path within Hugo's `content/` directory** (fallback)
-3. **Default to `"page"`** (if neither above applies)
-
-**Front matter type field example:**
-```yaml
----
-title: "Special Article"
-description: "Custom content type"
-type: "featured"        # ← Explicit type override
----
-```
-
-**Directory-based type detection:**
-```
-content/
-├── about.md           → type: "page"  
-├── posts/
-│   └── article1.md    → type: "posts"
-├── books/
-│   └── book1/
-│       └── index.md   → type: "books"
-└── tutorials/
-    └── tutorial1.md   → type: "tutorials"
-```
-
-The front matter `type` field takes precedence over directory structure, allowing you to override the default directory-based type for specific articles.
-
-#### Type Configuration Files
-
-Create type-specific configuration files in your config directory using the pattern `{type}.yaml`:
-
-**books.yaml** - Configuration for all book content:
+**Example: posts.yaml**
 ```yaml
 title:
-  visible: true
-  size: 72
-  color: "#2C3E50"
-  area:
-    x: 460
-    y: 100
-    width: 710
-    height: 370
-  block_position: "top-center"
-  line_alignment: "center"
-
-description:
-  visible: false
-
-overlay:
-  visible: true
-  image: "cover.jpg"
-  placement:
-    x: 50
-    y: 50
-    height: 580
-  fit: "contain"
-  opacity: 1.0
-
-background:
-  color: "#F8F9FA"
-```
-
-**posts.yaml** - Configuration for blog posts:
-```yaml
-title:
-  visible: true
   size: 64
   color: "#1A202C"
-  area:
-    x: 100
-    y: 80
-    width: 1000
-    height: 200
 
 description:
   visible: true
   content: "{{.Description}} - {{.Fields.author | default \"Blog\"}}"
   size: 28
-  color: "#718096"
-  area:
-    x: 100
-    y: 300
-    width: 1000
-    height: 150
 
 overlay:
   visible: false
-
-background:
-  color: "#FFFFFF"
 ```
 
-**tutorials.yaml** - Configuration for tutorial content:
-```yaml
-title:
-  visible: true
-  content: "Tutorial: {{.Title}}"
-  size: 56
-  color: "#2B6CB0"
-  
-description:
-  visible: true
-  content: "Step-by-step guide"
-  size: 24
-  color: "#4A5568"
-
-overlay:
-  visible: true
-  image: "tutorial-badge.png"
-  placement:
-    x: 950
-    y: 50
-    width: 200
-    height: 100
-  fit: "contain"
-```
-
-#### Partial Configuration Support
-
-Type configurations support partial settings - you only need to specify the values you want to change from the defaults:
-
-**minimal-books.yaml**:
-```yaml
-# Only override specific values
-title:
-  color: "#8B5CF6"            # Purple title for books
-  area:
-    x: 400                    # Move title to the right
-    
-overlay:
-  visible: true
-  placement:
-    height: 500              # Only set height, X/Y/width inherited from defaults
-```
-
-This partial configuration will:
-- Change title color to purple
-- Move title area X position to 400 (Y, width, height remain as defaults)
-- Enable overlay visibility  
-- Set overlay height to 500 (X, Y, width remain as defaults)
+Type configurations support partial overrides - only specify changed values from defaults.
 
 ### Front Matter Overrides
 
