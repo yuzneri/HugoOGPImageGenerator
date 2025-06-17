@@ -210,7 +210,19 @@ func (ir *ImageRenderer) renderTextLines(c *freetype.Context, face font.Face, li
 			lineX = blockX + (maxTextWidth-textWidthPx)/2
 		}
 
-		y := blockY + lineHeight + i*lineHeight
+		// Calculate baseline position properly considering font metrics
+		var y int
+		if i == 0 {
+			// For the first line, position baseline at blockY + ascent
+			metrics := face.Metrics()
+			ascent := int((metrics.Ascent + 63) >> 6) // Convert from 26.6 fixed point to pixels
+			y = blockY + ascent
+		} else {
+			// For subsequent lines, add lineHeight from the first baseline
+			metrics := face.Metrics()
+			ascent := int((metrics.Ascent + 63) >> 6)
+			y = blockY + ascent + i*lineHeight
+		}
 
 		err := drawStringWithSpacing(c, face, line, lineX, y, textConfig.LetterSpacing)
 		if err != nil {
