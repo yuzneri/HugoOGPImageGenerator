@@ -459,7 +459,7 @@ All `.md` pages under `content/` are processed:
 - Pages without YAML front matter (no front matter, or TOML/JSON front matter) are skipped with a warning.
 - Drafts (`draft: true`) and pages excluded by `kinds` or `enabled: false` are skipped (see [Page Selection](#page-selection)).
 - For a single-file page, assets are resolved from the directory that contains the file.
-- A section page (`_index.md`) gets the type of its directory, so `content/posts/_index.md` also uses `posts.yaml`. Override it with `ogp:` in the section's front matter, or exclude sections with `kinds` (see [Page Selection](#page-selection)).
+- A section page (`_index.md`) gets the type of its top-level section, like any other page, so `content/posts/_index.md` also uses `posts.yaml`. Override it with `ogp:` in the section's front matter, or exclude sections with `kinds` (see [Page Selection](#page-selection)).
 - `slug`, lowercased paths (`disablePathToLower`) and other content formats or extensions (`.markdown`, `.html`, ...) are not taken into account.
 
 ### Output Paths
