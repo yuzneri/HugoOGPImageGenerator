@@ -77,3 +77,14 @@ func findArticles(contentDir string) ([]string, error) {
 
 	return files, nil
 }
+
+// pageKind returns the Hugo page kind of a content file: home, section or page.
+func pageKind(file, contentDir string) string {
+	if filepath.Base(file) != BranchIndexFilename {
+		return PageKindPage
+	}
+	if filepath.Clean(filepath.Dir(file)) == filepath.Clean(contentDir) {
+		return PageKindHome
+	}
+	return PageKindSection
+}

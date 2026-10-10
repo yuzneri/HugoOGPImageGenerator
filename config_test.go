@@ -4,8 +4,11 @@ import (
 	"image/color"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 func TestParseHexColor(t *testing.T) {
@@ -409,5 +412,65 @@ func TestApplyFrontMatterOverrides(t *testing.T) {
 	// Other values should remain unchanged
 	if result.Title.Color != baseConfig.Title.Color {
 		t.Errorf("Expected title color to remain %q, got %q", baseConfig.Title.Color, result.Title.Color)
+	}
+}
+
+func TestKindsAndEnabledMerge(t *testing.T) {
+	merger := NewConfigMerger()
+	disabled := false
+
+	tests := []struct {
+		name        string
+		global      *ConfigSettings
+		typeConfig  *ConfigSettings
+		fm          *OGPFrontMatter
+		wantKinds   []string
+		wantEnabled bool
+	}{
+		{"defaults", nil, nil, nil, []string{PageKindHome, PageKindSection, PageKindPage}, true},
+		{"global", &ConfigSettings{Kinds: []string{PageKindPage}}, nil, nil, []string{PageKindPage}, true},
+		{"type overrides global", &ConfigSettings{Kinds: []string{PageKindPage}}, &ConfigSettings{Kinds: []string{PageKindSection}}, nil, []string{PageKindSection}, true},
+		{"type inherits global", &ConfigSettings{Kinds: []string{PageKindHome}}, &ConfigSettings{}, nil, []string{PageKindHome}, true},
+		{"empty list", nil, &ConfigSettings{Kinds: []string{}}, nil, []string{}, true},
+		{"front matter disables", nil, nil, &OGPFrontMatter{Enabled: &disabled}, []string{PageKindHome, PageKindSection, PageKindPage}, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := merger.MergeConfigsWithSettings(getDefaultConfig(), tt.global, tt.typeConfig, tt.fm)
+			if !reflect.DeepEqual(got.Kinds, tt.wantKinds) {
+				t.Errorf("Kinds = %v, want %v", got.Kinds, tt.wantKinds)
+			}
+			if got.Enabled != tt.wantEnabled {
+				t.Errorf("Enabled = %v, want %v", got.Enabled, tt.wantEnabled)
+			}
+		})
+	}
+}
+
+func TestKindsFromYAML(t *testing.T) {
+	var settings ConfigSettings
+	if err := yaml.Unmarshal([]byte("kinds: []\n"), &settings); err != nil {
+		t.Fatal(err)
+	}
+	if settings.Kinds == nil || len(settings.Kinds) != 0 {
+		t.Errorf("kinds: [] should be an empty non-nil list, got %#v", settings.Kinds)
+	}
+
+	settings = ConfigSettings{}
+	if err := yaml.Unmarshal([]byte("title:\n  size: 10\n"), &settings); err != nil {
+		t.Fatal(err)
+	}
+	if settings.Kinds != nil {
+		t.Errorf("omitted kinds should be nil, got %#v", settings.Kinds)
+	}
+}
+
+func TestValidateKinds(t *testing.T) {
+	if err := validateKinds([]string{PageKindHome, PageKindSection, PageKindPage}); err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if err := validateKinds([]string{"sections"}); err == nil {
+		t.Error("expected error for unknown kind")
 	}
 }

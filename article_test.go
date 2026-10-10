@@ -109,3 +109,23 @@ func TestFindArticles(t *testing.T) {
 		t.Errorf("got %v, want %v", rel, want)
 	}
 }
+
+func TestPageKind(t *testing.T) {
+	contentDir := filepath.Join("site", "content")
+	tests := []struct {
+		file string
+		want string
+	}{
+		{"_index.md", PageKindHome},
+		{"posts/_index.md", PageKindSection},
+		{"tags/go/_index.md", PageKindSection},
+		{"posts/bundle/index.md", PageKindPage},
+		{"posts/single.md", PageKindPage},
+		{"about.md", PageKindPage},
+	}
+	for _, tt := range tests {
+		if got := pageKind(filepath.Join(contentDir, tt.file), contentDir+string(filepath.Separator)); got != tt.want {
+			t.Errorf("pageKind(%s) = %s, want %s", tt.file, got, tt.want)
+		}
+	}
+}

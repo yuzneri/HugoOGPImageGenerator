@@ -39,6 +39,10 @@ func (cm *ConfigMerger) applySettingsToConfig(target *Config, settings *ConfigSe
 	if settings.Overlay != nil {
 		cm.applyOverlaySettings(&target.Overlay, settings.Overlay)
 	}
+
+	if settings.Kinds != nil {
+		target.Kinds = append([]string{}, settings.Kinds...)
+	}
 }
 
 // applyBackgroundSettings applies BackgroundSettings to BackgroundConfig.
@@ -241,6 +245,10 @@ func (cm *ConfigMerger) deepCopyPointerFields(dest, src *Config) {
 	// Overlay pointers
 	dest.Overlay.Image = cm.copyStringPtr(src.Overlay.Image)
 
+	if src.Kinds != nil {
+		dest.Kinds = append([]string{}, src.Kinds...)
+	}
+
 	// Overlay placement pointers
 	dest.Overlay.Placement.Width = cm.copyIntPtr(src.Overlay.Placement.Width)
 	dest.Overlay.Placement.Height = cm.copyIntPtr(src.Overlay.Placement.Height)
@@ -279,6 +287,10 @@ func (cm *ConfigMerger) applyFrontMatterOverrides(config *Config, ogpFM *OGPFron
 	cm.mergeBackgroundConfig(result, ogpFM)
 	cm.mergeOutputConfig(result, ogpFM)
 	cm.mergeOverlayConfig(result, ogpFM)
+
+	if ogpFM.Enabled != nil {
+		result.Enabled = *ogpFM.Enabled
+	}
 
 	return result
 }

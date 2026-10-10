@@ -117,6 +117,12 @@ type Config struct {
 
 	// Default overlay configuration
 	Overlay MainOverlayConfig `yaml:"overlay"`
+
+	// Page kinds to generate images for (home, section, page)
+	Kinds []string `yaml:"kinds"`
+
+	// Whether to generate an image for the page (set from front matter only)
+	Enabled bool `yaml:"-"`
 }
 
 // parseHexColor parses hex color codes like "#FF00FF" or "#ff00ff80"
@@ -188,6 +194,9 @@ type OGPFrontMatter struct {
 
 	// Output settings
 	Output *OutputOverride `yaml:"output,omitempty"`
+
+	// Set to false to skip generating an image for this page
+	Enabled *bool `yaml:"enabled,omitempty"`
 }
 
 // getDefaultConfig returns a config with sensible defaults for OGP generation.
@@ -199,8 +208,32 @@ func getDefaultConfig() *Config {
 	setDefaultTitle(config)
 	setDefaultDescription(config)
 	setDefaultOverlay(config)
+	config.Kinds = []string{PageKindHome, PageKindSection, PageKindPage}
+	config.Enabled = true
 
 	return config
+}
+
+// validateKinds reports an error if kinds contains a value other than home, section or page.
+func validateKinds(kinds []string) error {
+	for _, kind := range kinds {
+		switch kind {
+		case PageKindHome, PageKindSection, PageKindPage:
+		default:
+			return NewValidationError(fmt.Sprintf("unknown page kind %q in kinds (allowed: %s, %s, %s)", kind, PageKindHome, PageKindSection, PageKindPage))
+		}
+	}
+	return nil
+}
+
+// includesKind reports whether images are generated for the given page kind.
+func (c *Config) includesKind(kind string) bool {
+	for _, k := range c.Kinds {
+		if k == kind {
+			return true
+		}
+	}
+	return false
 }
 
 // setDefaultBackground configures default background settings

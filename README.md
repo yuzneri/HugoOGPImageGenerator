@@ -59,6 +59,8 @@ Each level can override any setting from the previous levels, allowing for fine-
 When no `config.yaml` file is provided, or when specific options are omitted, the following defaults are used:
 
 ```yaml
+kinds: [home, section, page]
+
 background:
   color: "#FFFFFF"
   # image: null
@@ -230,6 +232,28 @@ The final image size depends on both the `placement` dimensions and the `fit` op
 - **`contain`**: Scale to fit within target area (preserves aspect ratio)
 - **`fill`**: Stretch to exact target dimensions (may distort)
 - **`none`**: No resizing, uses original dimensions
+
+#### Page Selection
+```yaml
+kinds: [home, section, page]   # Page kinds to generate images for
+```
+
+| Kind | Content file |
+|---|---|
+| `home` | `content/_index.md` |
+| `section` | Other `_index.md` (sections, taxonomies and terms) |
+| `page` | Page bundles (`index.md`) and single-file pages |
+
+`kinds` can be set in the global config and in type-specific configs; a type config replaces the global list.
+An empty list (`kinds: []`) generates nothing for that type, and an unknown kind is an error.
+
+To skip a single page, set `enabled: false` in its front matter (front matter only):
+```yaml
+ogp:
+  enabled: false
+```
+
+Skipped pages are reported as `Skipped: <path> (<reason>)`, also when given to `--single` or `--test`.
 
 ### Global Configuration
 
@@ -431,7 +455,7 @@ All `.md` pages under `content/` are processed:
 - `.md` files inside a leaf bundle (other than `index.md`) are page resources and are skipped.
 - Pages without YAML front matter (no front matter, or TOML/JSON front matter) are skipped with a warning.
 - For a single-file page, assets are resolved from the directory that contains the file.
-- A section page (`_index.md`) gets the type of its directory, so `content/posts/_index.md` also uses `posts.yaml`. Override it with `ogp:` in the section's front matter if needed.
+- A section page (`_index.md`) gets the type of its directory, so `content/posts/_index.md` also uses `posts.yaml`. Override it with `ogp:` in the section's front matter, or exclude sections with `kinds` (see [Page Selection](#page-selection)).
 - `slug`, lowercased paths (`disablePathToLower`) and other content formats or extensions (`.markdown`, `.html`, ...) are not taken into account.
 
 ### Output Paths

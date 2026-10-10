@@ -26,6 +26,11 @@ const (
 	// MarkdownExtension is the extension of Hugo content files handled by this tool
 	MarkdownExtension = ".md"
 
+	// Page kinds selectable with the "kinds" setting
+	PageKindHome    = "home"    // content/_index.md
+	PageKindSection = "section" // other _index.md (sections, taxonomies and terms)
+	PageKindPage    = "page"    // index.md and single-file pages
+
 	// DefaultTestFilename for test mode output
 	DefaultTestFilename = "test.png"
 )

@@ -15,6 +15,9 @@ type ConfigSettings struct {
 
 	// Default overlay configuration
 	Overlay *OverlayConfigSettings `yaml:"overlay,omitempty"`
+
+	// Page kinds to generate images for. nil inherits; an empty list generates nothing.
+	Kinds []string `yaml:"kinds,omitempty"`
 }
 
 // BackgroundSettings represents background configuration for YAML reading.

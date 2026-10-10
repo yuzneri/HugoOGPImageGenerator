@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -461,5 +462,90 @@ func TestGenerateSingle_File(t *testing.T) {
 
 	if _, err := os.Stat(filepath.Join(projectRoot, "public", "events", "meetup", "ogp.png")); err != nil {
 		t.Errorf("Expected output file: %v", err)
+	}
+}
+
+// TestGenerateAll_Exclusion tests excluding pages by kind (global and type config) and by front matter.
+func TestGenerateAll_Exclusion(t *testing.T) {
+	projectRoot := t.TempDir()
+	contentDir := filepath.Join(projectRoot, "content")
+
+	files := map[string]string{
+		"content/_index.md":        "---\ntitle: Home\n---\n",
+		"content/about.md":         "---\ntitle: About\n---\n",
+		"content/hidden.md":        "---\ntitle: Hidden\nogp:\n  enabled: false\n---\n",
+		"content/posts/_index.md":  "---\ntitle: Posts\n---\n",
+		"content/posts/post.md":    "---\ntitle: Post\n---\n",
+		"content/events/_index.md": "---\ntitle: Events\n---\n",
+		"content/events/meetup.md": "---\ntitle: Meetup\n---\n",
+		"ogp/config.yaml":          "kinds: [home, page]\n",
+		"ogp/events.yaml":          "kinds: [section, page]\n",
+		"ogp/posts.yaml":           "title:\n  size: 40\n",
+	}
+	for path, body := range files {
+		full := filepath.Join(projectRoot, path)
+		if err := os.MkdirAll(filepath.Dir(full), DefaultFilePermission); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, []byte(body), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	generator, err := NewOGPGenerator(filepath.Join(projectRoot, "ogp", "config.yaml"), contentDir, projectRoot)
+	if err != nil {
+		t.Fatalf("Failed to create generator: %v", err)
+	}
+	if err := generator.GenerateAll(); err != nil {
+		t.Fatalf("GenerateAll should not return error: %v", err)
+	}
+
+	var got []string
+	err = filepath.WalkDir(filepath.Join(projectRoot, "public"), func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		rel, _ := filepath.Rel(projectRoot, path)
+		got = append(got, filepath.ToSlash(rel))
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := []string{
+		"public/about/ogp.png",
+		"public/events/meetup/ogp.png",
+		"public/events/ogp.png", // events.yaml re-enables sections
+		"public/ogp.png",
+		"public/posts/post/ogp.png", // posts/_index.md excluded by the global kinds
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("generated files:\n got %v\nwant %v", got, want)
+	}
+}
+
+// TestGenerateAll_UnknownKind tests that a typo in kinds is reported instead of silently generating nothing.
+func TestGenerateAll_UnknownKind(t *testing.T) {
+	projectRoot := t.TempDir()
+	contentDir := filepath.Join(projectRoot, "content")
+	if err := os.MkdirAll(contentDir, DefaultFilePermission); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(contentDir, "about.md"), []byte("---\ntitle: About\n---\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	configPath := filepath.Join(projectRoot, "config.yaml")
+	if err := os.WriteFile(configPath, []byte("kinds: [pages]\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	generator, err := NewOGPGenerator(configPath, contentDir, projectRoot)
+	if err != nil {
+		t.Fatalf("Failed to create generator: %v", err)
+	}
+	err = generator.GenerateAll()
+	if err == nil || !strings.Contains(err.Error(), `unknown page kind "pages"`) {
+		t.Errorf("expected unknown page kind error, got %v", err)
 	}
 }

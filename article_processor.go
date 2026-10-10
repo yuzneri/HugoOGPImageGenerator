@@ -61,6 +61,12 @@ func (ap *ArticleProcessor) ProcessArticle(articlePath string, options ProcessOp
 		return err
 	}
 
+	if reason := ap.skipReason(article, finalConfig); reason != "" {
+		relPath, _ := filepath.Rel(ap.contentDir, article.File)
+		fmt.Printf("Skipped: %s (%s)\n", relPath, reason)
+		return nil
+	}
+
 	// Determine text content for image generation
 	title, description, err := ap.determineArticleContent(fm, finalConfig, article.File)
 	if err != nil {
@@ -88,6 +94,17 @@ func (ap *ArticleProcessor) ProcessArticle(articlePath string, options ProcessOp
 	return nil
 }
 
+// skipReason returns why no image is generated for the article, or "" if it should be generated.
+func (ap *ArticleProcessor) skipReason(article *Article, config *Config) string {
+	if !config.Enabled {
+		return "ogp.enabled is false"
+	}
+	if kind := pageKind(article.File, ap.contentDir); !config.includesKind(kind) {
+		return fmt.Sprintf("page kind %q is not in kinds", kind)
+	}
+	return ""
+}
+
 // buildFinalConfigurationWithSettings creates the final configuration by applying the 4-level hierarchy:
 // Default Config -> Global ConfigSettings -> Type ConfigSettings -> Front Matter Overrides
 func (ap *ArticleProcessor) buildFinalConfigurationWithSettings(fm *FrontMatter, articlePath string) (*Config, error) {
@@ -110,6 +127,10 @@ func (ap *ArticleProcessor) buildFinalConfigurationWithSettings(fm *FrontMatter,
 		typeSettings,
 		fm.OGP,
 	)
+
+	if err := validateKinds(finalConfig.Kinds); err != nil {
+		return nil, err
+	}
 
 	return finalConfig, nil
 }
