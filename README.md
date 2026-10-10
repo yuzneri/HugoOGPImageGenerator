@@ -3,6 +3,20 @@
 A Go application that automatically generates Open Graph Protocol (OGP) images for Hugo static sites.
 It processes Hugo content with front matter and creates custom social media preview images with advanced text rendering, background processing, and overlay composition.
 
+## Installation
+
+Download the latest release binary for your platform (Linux/macOS, amd64/arm64) as `./ogp`:
+```bash
+curl -fsSL https://raw.githubusercontent.com/yuzneri/HugoOGPImageGenerator/main/install.sh | sh
+```
+
+Set `INSTALL_DIR` to change the destination and `VERSION` (e.g. `v19`) to pin a release:
+```bash
+curl -fsSL https://raw.githubusercontent.com/yuzneri/HugoOGPImageGenerator/main/install.sh | INSTALL_DIR=./bin VERSION=v19 sh
+```
+
+For Windows, download the zip from the [Releases](https://github.com/yuzneri/HugoOGPImageGenerator/releases/latest) page.
+
 ## Usage
 
 ### Generate OGP for all articles
