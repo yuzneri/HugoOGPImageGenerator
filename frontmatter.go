@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 
 	"gopkg.in/yaml.v3"
@@ -20,11 +21,15 @@ type FrontMatter struct {
 	Fields      map[string]interface{} `yaml:",inline"`       // Additional fields for template access
 }
 
+// ErrNoFrontMatter is returned when content does not start with YAML front matter.
+// Hugo also accepts pages without front matter or with TOML/JSON front matter, which this tool does not read.
+var ErrNoFrontMatter = errors.New("no YAML front matter found")
+
 // parseFrontMatter extracts and parses YAML front matter from article content.
 // It expects front matter to be delimited by "---" lines at the beginning of the content.
 func parseFrontMatter(content []byte) (*FrontMatter, error) {
 	if !bytes.HasPrefix(content, []byte("---\n")) {
-		return nil, fmt.Errorf("no front matter found")
+		return nil, ErrNoFrontMatter
 	}
 
 	// Skip the opening "---\n"

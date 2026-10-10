@@ -26,13 +26,17 @@ For Windows, download the zip from the [Releases](https://github.com/yuzneri/Hug
 
 ### Generate for a specific article
 ```bash
-./ogp --single /path/to/hugo/project "article/path"
+./ogp --single /path/to/hugo/project "posts/my-bundle"
+./ogp --single /path/to/hugo/project "posts/my-post.md"
 ```
 
 ### Test mode
 ```bash
-./ogp --test "/path/to/article/directory"
+./ogp --test "/path/to/hugo/project/content/posts/my-bundle"
+./ogp --test "/path/to/hugo/project/content/posts/my-post.md"
 ```
+
+An article can be given as a page bundle directory (`index.md`, or `_index.md` for a section) or as a content file.
 
 ### List all articles with OGP settings
 ```bash
@@ -413,6 +417,22 @@ All assets (images, fonts) are resolved using a simple priority system:
 
 This applies to all asset references regardless of where they're defined (global config, type config, or front matter). 
 Japanese fonts are auto-detected when no font path is specified.
+
+### Target Pages
+All `.md` pages under `content/` are processed:
+
+| Content file | Output (default) |
+|---|---|
+| `content/_index.md` | `public/ogp.png` |
+| `content/posts/_index.md` | `public/posts/ogp.png` |
+| `content/posts/my-bundle/index.md` | `public/posts/my-bundle/ogp.png` |
+| `content/posts/my-post.md` | `public/posts/my-post/ogp.png` |
+
+- `.md` files inside a leaf bundle (other than `index.md`) are page resources and are skipped.
+- Pages without YAML front matter (no front matter, or TOML/JSON front matter) are skipped with a warning.
+- For a single-file page, assets are resolved from the directory that contains the file.
+- A section page (`_index.md`) gets the type of its directory, so `content/posts/_index.md` also uses `posts.yaml`. Override it with `ogp:` in the section's front matter if needed.
+- `slug`, lowercased paths (`disablePathToLower`) and other content formats or extensions (`.markdown`, `.html`, ...) are not taken into account.
 
 ### Output Paths
 - **Default**: `{output.directory}/{article-path}/ogp.{format}`

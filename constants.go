@@ -20,6 +20,12 @@ const (
 	// DefaultIndexFilename is the Hugo content index file
 	DefaultIndexFilename = "index.md"
 
+	// BranchIndexFilename is the Hugo index file of a section or the home page
+	BranchIndexFilename = "_index.md"
+
+	// MarkdownExtension is the extension of Hugo content files handled by this tool
+	MarkdownExtension = ".md"
+
 	// DefaultTestFilename for test mode output
 	DefaultTestFilename = "test.png"
 )

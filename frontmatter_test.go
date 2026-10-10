@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
@@ -65,9 +66,8 @@ This is an article without front matter.
 		t.Error("Expected error for content without front matter")
 	}
 
-	expectedError := "no front matter found"
-	if !strings.Contains(err.Error(), expectedError) {
-		t.Errorf("Expected error to contain %q, got %q", expectedError, err.Error())
+	if !errors.Is(err, ErrNoFrontMatter) {
+		t.Errorf("Expected ErrNoFrontMatter, got %v", err)
 	}
 }
 

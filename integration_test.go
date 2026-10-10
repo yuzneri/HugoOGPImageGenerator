@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -353,5 +354,112 @@ func TestFontManager_Integration(t *testing.T) {
 
 	if fallbackFont != defaultFont {
 		t.Error("Should return fallback font when original font fails to load")
+	}
+}
+
+// TestGenerateAll_HugoPageKinds tests that every kind of Hugo page gets an image at its permalink path.
+func TestGenerateAll_HugoPageKinds(t *testing.T) {
+	projectRoot := t.TempDir()
+	contentDir := filepath.Join(projectRoot, "content")
+
+	pages := map[string]string{
+		"_index.md":                 "Home",
+		"about.md":                  "About",
+		"events/_index.md":          "Events",
+		"events/2026-10-meetup.md":  "Meetup",
+		"events/custom-url.md":      "Custom URL\nurl: /special/",
+		"posts/bundle/index.md":     "Bundle",
+		"posts/bundle/resource.md":  "Resource",
+		"posts/bundle/sub/note.md":  "Nested resource",
+		"posts/nested/deep/page.md": "Deep",
+	}
+	for path, title := range pages {
+		full := filepath.Join(contentDir, path)
+		if err := os.MkdirAll(filepath.Dir(full), DefaultFilePermission); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, []byte("---\ntitle: "+title+"\n---\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Pages without YAML front matter are skipped rather than aborting the whole run.
+	skipped := map[string]string{
+		"no-front-matter.md": "# Plain page\n",
+		"toml/_index.md":     "+++\ntitle = \"TOML\"\n+++\n",
+	}
+	for path, body := range skipped {
+		full := filepath.Join(contentDir, path)
+		if err := os.MkdirAll(filepath.Dir(full), DefaultFilePermission); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, []byte(body), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	configPath := filepath.Join(projectRoot, "config.yaml")
+	if err := os.WriteFile(configPath, []byte("output:\n  directory: public\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	generator, err := NewOGPGenerator(configPath, contentDir, projectRoot)
+	if err != nil {
+		t.Fatalf("Failed to create generator: %v", err)
+	}
+	if err := generator.GenerateAll(); err != nil {
+		t.Fatalf("GenerateAll should not return error: %v", err)
+	}
+
+	var got []string
+	err = filepath.WalkDir(filepath.Join(projectRoot, "public"), func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		rel, _ := filepath.Rel(projectRoot, path)
+		got = append(got, filepath.ToSlash(rel))
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := []string{
+		"public/about/ogp.png",
+		"public/events/2026-10-meetup/ogp.png",
+		"public/events/ogp.png",
+		"public/ogp.png",
+		"public/posts/bundle/ogp.png",
+		"public/posts/nested/deep/page/ogp.png",
+		"public/special/ogp.png",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("generated files:\n got %v\nwant %v", got, want)
+	}
+}
+
+// TestGenerateSingle_File tests that a single-file page can be specified directly.
+func TestGenerateSingle_File(t *testing.T) {
+	projectRoot := t.TempDir()
+	contentDir := filepath.Join(projectRoot, "content")
+	page := filepath.Join(contentDir, "events", "meetup.md")
+	if err := os.MkdirAll(filepath.Dir(page), DefaultFilePermission); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(page, []byte("---\ntitle: Meetup\n---\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	configPath := filepath.Join(projectRoot, "config.yaml")
+	generator, err := NewOGPGenerator(configPath, contentDir, projectRoot)
+	if err != nil {
+		t.Fatalf("Failed to create generator: %v", err)
+	}
+	if err := generator.GenerateSingle("events/meetup.md"); err != nil {
+		t.Fatalf("GenerateSingle should not return error: %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(projectRoot, "public", "events", "meetup", "ogp.png")); err != nil {
+		t.Errorf("Expected output file: %v", err)
 	}
 }

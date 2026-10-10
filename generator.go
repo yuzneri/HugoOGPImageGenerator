@@ -1,8 +1,8 @@
 package main
 
 import (
+	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -128,22 +128,13 @@ func generateOutputFilename(config *Config, fm *FrontMatter, articlePath, conten
 }
 
 // GenerateSingle generates an OGP image for a single article.
-// The articlePath can be relative (from contentDir) or absolute.
+// The articlePath is a page bundle directory or a content file, relative (from contentDir) or absolute.
 func (g *OGPGenerator) GenerateSingle(articlePath string) error {
 	var fullArticlePath string
 	if filepath.IsAbs(articlePath) {
 		fullArticlePath = articlePath
 	} else {
 		fullArticlePath = filepath.Join(g.contentDir, articlePath)
-	}
-
-	if _, err := os.Stat(fullArticlePath); os.IsNotExist(err) {
-		return NewFileError("stat", fullArticlePath, err)
-	}
-
-	indexPath := filepath.Join(fullArticlePath, DefaultIndexFilename)
-	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
-		return NewFileError("stat", indexPath, err)
 	}
 
 	fmt.Printf("Generating OGP image for: %s\n", articlePath)
@@ -154,34 +145,30 @@ func (g *OGPGenerator) GenerateSingle(articlePath string) error {
 // This is useful for previewing images during development without overwriting production files.
 func (g *OGPGenerator) GenerateTest(articlePath string) error {
 	// testモードでは記事パスを直接使用（contentDir不要）
-	fullArticlePath := articlePath
-
-	if _, err := os.Stat(fullArticlePath); os.IsNotExist(err) {
-		return NewFileError("stat", fullArticlePath, err)
-	}
-
-	indexPath := filepath.Join(fullArticlePath, DefaultIndexFilename)
-	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
-		return NewFileError("stat", indexPath, err)
-	}
-
 	fmt.Printf("Testing OGP image for: %s\n", articlePath)
-	return g.articleProcessor.ProcessArticle(fullArticlePath, ProcessOptions{TestMode: true})
+	return g.articleProcessor.ProcessArticle(articlePath, ProcessOptions{TestMode: true})
 }
 
-// GenerateAll generates OGP images for all articles in the content directory.
-// It walks through all directories containing index.md files and processes them.
+// GenerateAll generates OGP images for every page in the content directory:
+// page bundles, section and home pages (_index.md), and single-file pages.
+// Pages without YAML front matter are skipped with a warning.
 func (g *OGPGenerator) GenerateAll() error {
-	return filepath.WalkDir(g.contentDir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
+	files, err := findArticles(g.contentDir)
+	if err != nil {
+		return err
+	}
+
+	for _, file := range files {
+		if err := g.articleProcessor.ProcessArticle(file, ProcessOptions{TestMode: false}); err != nil {
+			// Hugo pages may have no front matter or TOML/JSON front matter; one such page
+			// must not stop images for the rest of the site.
+			if errors.Is(err, ErrNoFrontMatter) {
+				DefaultLogger.Warning("Skipping %s: %v", file, err)
+				continue
+			}
 			return err
 		}
+	}
 
-		if d.Name() == DefaultIndexFilename {
-			articleDir := filepath.Dir(path)
-			return g.articleProcessor.ProcessArticle(articleDir, ProcessOptions{TestMode: false})
-		}
-
-		return nil
-	})
+	return nil
 }

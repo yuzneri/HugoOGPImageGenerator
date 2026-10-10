@@ -47,38 +47,44 @@ type ProcessOptions struct {
 }
 
 // ProcessArticle processes a single article and generates its OGP image.
+// articlePath is a page bundle directory or a content file (index.md, _index.md, or a single-file page).
 // It reads the front matter, applies configuration overrides, and orchestrates the rendering pipeline.
 func (ap *ArticleProcessor) ProcessArticle(articlePath string, options ProcessOptions) error {
+	article, err := resolveArticle(articlePath)
+	if err != nil {
+		return err
+	}
+
 	// Parse front matter and build configuration
-	fm, finalConfig, err := ap.parseAndConfigureArticle(articlePath)
+	fm, finalConfig, err := ap.parseAndConfigureArticle(article)
 	if err != nil {
 		return err
 	}
 
 	// Determine text content for image generation
-	title, description, err := ap.determineArticleContent(fm, finalConfig)
+	title, description, err := ap.determineArticleContent(fm, finalConfig, article.File)
 	if err != nil {
 		return err
 	}
 
 	// Generate appropriate output path
-	outputPath, err := ap.generateOutputPath(finalConfig, fm, articlePath, options)
+	outputPath, err := ap.generateOutputPath(finalConfig, fm, article.PageDir, options)
 	if err != nil {
 		return err
 	}
 
 	// Handle test mode output
 	if options.TestMode {
-		ap.handleTestModeOutput(finalConfig, fm, articlePath, title, description, options.OutputDir)
+		ap.handleTestModeOutput(finalConfig, fm, article.PageDir, title, description, options.OutputDir)
 	}
 
 	// Generate the OGP image
-	err = ap.generateImage(title, description, outputPath, finalConfig, articlePath, fm.OGP, options.TestMode)
+	err = ap.generateImage(title, description, outputPath, finalConfig, article.Dir, fm.OGP, options.TestMode)
 	if err != nil {
 		return NewRenderError("OGP image", err)
 	}
 
-	ap.logSuccess(articlePath, outputPath, options.TestMode)
+	ap.logSuccess(article.File, outputPath, options.TestMode)
 	return nil
 }
 
@@ -319,35 +325,33 @@ func (ap *ArticleProcessor) saveImage(img *image.RGBA, outputPath string) error 
 }
 
 // parseAndConfigureArticle reads front matter and builds the final configuration
-func (ap *ArticleProcessor) parseAndConfigureArticle(articlePath string) (*FrontMatter, *Config, error) {
-	indexPath := filepath.Join(articlePath, DefaultIndexFilename)
-	content, err := os.ReadFile(indexPath)
+func (ap *ArticleProcessor) parseAndConfigureArticle(article *Article) (*FrontMatter, *Config, error) {
+	content, err := os.ReadFile(article.File)
 	if err != nil {
-		return nil, nil, NewFileError("read", indexPath, err)
+		return nil, nil, NewFileError("read", article.File, err)
 	}
 
 	fm, err := parseFrontMatter(content)
 	if err != nil {
-		return nil, nil, NewConfigError(fmt.Sprintf("failed to parse front matter in %s", indexPath), err)
+		return nil, nil, NewConfigError(fmt.Sprintf("failed to parse front matter in %s", article.File), err)
 	}
 
 	// Apply 4-level configuration hierarchy: Default -> Global -> Type -> Front Matter
-	finalConfig, err := ap.buildFinalConfigurationWithSettings(fm, articlePath)
+	finalConfig, err := ap.buildFinalConfigurationWithSettings(fm, article.Dir)
 	if err != nil {
-		return nil, nil, NewConfigError(fmt.Sprintf("failed to build configuration for %s", indexPath), err)
+		return nil, nil, NewConfigError(fmt.Sprintf("failed to build configuration for %s", article.File), err)
 	}
 
 	return fm, finalConfig, nil
 }
 
 // determineArticleContent resolves title and description text and validates content exists
-func (ap *ArticleProcessor) determineArticleContent(fm *FrontMatter, config *Config) (string, string, error) {
+func (ap *ArticleProcessor) determineArticleContent(fm *FrontMatter, config *Config, file string) (string, string, error) {
 	title := ap.determineText(fm, &config.Title, fm.Title)
 	description := ap.determineText(fm, &config.Description, fm.Description)
 
 	if title == "" && description == "" {
-		indexPath := filepath.Join("(article)", DefaultIndexFilename)
-		return "", "", NewValidationError(fmt.Sprintf("no content found in %s (both title and description are empty)", indexPath))
+		return "", "", NewValidationError(fmt.Sprintf("no content found in %s (both title and description are empty)", file))
 	}
 
 	return title, description, nil
@@ -369,8 +373,8 @@ func (ap *ArticleProcessor) handleTestModeOutput(config *Config, fm *FrontMatter
 }
 
 // logSuccess outputs information about the successfully generated image.
-func (ap *ArticleProcessor) logSuccess(articlePath, outputPath string, testMode bool) {
-	relPath, _ := filepath.Rel(ap.contentDir, articlePath)
+func (ap *ArticleProcessor) logSuccess(articleFile, outputPath string, testMode bool) {
+	relPath, _ := filepath.Rel(ap.contentDir, articleFile)
 
 	if testMode {
 		fmt.Printf("Test OGP image generated: %s\n", relPath)

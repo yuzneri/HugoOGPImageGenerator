@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,68 +12,56 @@ func listArticles(contentDir string) error {
 	fmt.Println("Available articles:")
 	fmt.Println("==================")
 
-	var count int
-	err := filepath.WalkDir(contentDir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if d.Name() == DefaultIndexFilename {
-			articleDir := filepath.Dir(path)
-			relPath, err := filepath.Rel(contentDir, articleDir)
-			if err != nil {
-				return err
-			}
-
-			content, err := os.ReadFile(path)
-			if err != nil {
-				fmt.Printf("  %s (failed to read title)\n", relPath)
-				count++
-				return nil
-			}
-
-			fm, err := parseFrontMatter(content)
-			if err != nil {
-				fmt.Printf("  %s (failed to parse front matter)\n", relPath)
-				count++
-				return nil
-			}
-
-			title := fm.Title
-			if title == "" {
-				title = "(no title)"
-			}
-
-			ogpSettings := ""
-			if fm.OGP != nil {
-				var settings []string
-				if (fm.OGP.Title != nil && fm.OGP.Title.Content != nil) ||
-					(fm.OGP.Description != nil && fm.OGP.Description.Content != nil) {
-					settings = append(settings, "custom content")
-				}
-				if fm.OGP.Overlay != nil {
-					settings = append(settings, "overlay composition")
-				}
-				if fm.OGP.Title != nil || fm.OGP.Description != nil {
-					settings = append(settings, "custom text")
-				}
-				if len(settings) > 0 {
-					ogpSettings = fmt.Sprintf(" [%s]", strings.Join(settings, ", "))
-				}
-			}
-
-			fmt.Printf("  %s\n    Title: %s%s\n", relPath, title, ogpSettings)
-			count++
-		}
-
-		return nil
-	})
-
+	files, err := findArticles(contentDir)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("\nTotal: %d articles found\n", count)
+	for _, path := range files {
+		relPath, err := filepath.Rel(contentDir, path)
+		if err != nil {
+			return err
+		}
+
+		content, err := os.ReadFile(path)
+		if err != nil {
+			fmt.Printf("  %s (failed to read title)\n", relPath)
+			continue
+		}
+
+		fm, err := parseFrontMatter(content)
+		if err != nil {
+			fmt.Printf("  %s (failed to parse front matter)\n", relPath)
+			continue
+		}
+
+		title := fm.Title
+		if title == "" {
+			title = "(no title)"
+		}
+
+		ogpSettings := ""
+		if fm.OGP != nil {
+			var settings []string
+			if (fm.OGP.Title != nil && fm.OGP.Title.Content != nil) ||
+				(fm.OGP.Description != nil && fm.OGP.Description.Content != nil) {
+				settings = append(settings, "custom content")
+			}
+			if fm.OGP.Overlay != nil {
+				settings = append(settings, "overlay composition")
+			}
+			if fm.OGP.Title != nil || fm.OGP.Description != nil {
+				settings = append(settings, "custom text")
+			}
+			if len(settings) > 0 {
+				ogpSettings = fmt.Sprintf(" [%s]", strings.Join(settings, ", "))
+			}
+		}
+
+		fmt.Printf("  %s\n    Title: %s%s\n", relPath, title, ogpSettings)
+	}
+
+	fmt.Printf("\nTotal: %d articles found\n", len(files))
 	fmt.Println("\nUsage:")
 	fmt.Println("  ogp-generator --test \"<article-path>\"")
 	fmt.Println("  ogp-generator --single <project-root> \"<article-path>\"")
@@ -87,7 +74,7 @@ func printUsage() {
 	fmt.Println("Usage:")
 	fmt.Println("  ogp-generator <project-root>                          # Generate all OGP images")
 	fmt.Println("  ogp-generator --single <project-root> <article-path>  # Generate single article OGP")
-	fmt.Println("  ogp-generator --test <article-directory-path>         # Test single article OGP (output to current dir)")
+	fmt.Println("  ogp-generator --test <article-path>                   # Test single article OGP (output to current dir)")
 	fmt.Println("  ogp-generator --list <project-root>                   # List all available articles")
 	fmt.Println("  ogp-generator --version                               # Show version information")
 	fmt.Println("")
@@ -112,7 +99,7 @@ func printUsage() {
 	fmt.Println("  ogp-generator --list /path/to/project")
 	fmt.Println("")
 	fmt.Println("Notes:")
-	fmt.Println("  - For --test mode, specify the full path to the article directory containing index.md")
+	fmt.Println("  - <article-path> is a page bundle directory or a content file (e.g. posts/my-post.md)")
 	fmt.Println("  - Relative paths are resolved from current working directory")
 	fmt.Println("  - The --config flag can be placed anywhere in the command line")
 	fmt.Println("  - If --config flag is not specified, uses config.yaml from executable directory")
