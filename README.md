@@ -253,7 +253,15 @@ ogp:
   enabled: false
 ```
 
-Pages with `draft: true` are always skipped, because Hugo does not publish drafts by default and an image in `public/` would expose an unpublished page.
+Pages with `draft: true` follow Hugo's `buildDrafts` setting, because an image in `public/` for a draft that Hugo does not publish would expose an unpublished page.
+The setting is read in the same order of precedence as Hugo:
+
+1. The `HUGO_BUILDDRAFTS` environment variable (`true` / `false`)
+2. `buildDrafts` in the project configuration file: the first of `hugo.toml`, `hugo.yaml`, `hugo.json`, `config.toml`, `config.yaml` and `config.json` in the project root
+3. `buildDrafts` in `config/_default/` (same file names)
+4. `false` (Hugo's default)
+
+The `-D` / `--buildDrafts` flag of the `hugo` command, `hugo --config` and per-environment directories such as `config/production/` are not visible to this tool; use `HUGO_BUILDDRAFTS` in those cases.
 
 Skipped pages are reported as `Skipped: <path> (<reason>)`, also when given to `--single` or `--test`.
 
@@ -457,7 +465,7 @@ All `.md` pages under `content/` are processed:
 
 - `.md` files inside a leaf bundle (other than `index.md`) are page resources and are skipped.
 - Pages without YAML front matter (no front matter, or TOML/JSON front matter) are skipped with a warning.
-- Drafts (`draft: true`) and pages excluded by `kinds` or `enabled: false` are skipped (see [Page Selection](#page-selection)).
+- Drafts (`draft: true`, unless Hugo's `buildDrafts` is enabled) and pages excluded by `kinds` or `enabled: false` are skipped (see [Page Selection](#page-selection)).
 - For a single-file page, assets are resolved from the directory that contains the file.
 - A section page (`_index.md`) gets the type of its top-level section, like any other page, so `content/posts/_index.md` also uses `posts.yaml`. Override it with `ogp:` in the section's front matter, or exclude sections with `kinds` (see [Page Selection](#page-selection)).
 - `slug`, lowercased paths (`disablePathToLower`) and other content formats or extensions (`.markdown`, `.html`, ...) are not taken into account.

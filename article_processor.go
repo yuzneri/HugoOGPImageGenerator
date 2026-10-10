@@ -23,6 +23,7 @@ type ArticleProcessor struct {
 	configPath        string
 	templateProcessor *TemplateProcessor
 	configMerger      *ConfigMerger
+	buildDrafts       bool // Whether Hugo publishes drafts; drafts get no image otherwise
 }
 
 // NewArticleProcessor creates a new ArticleProcessor with the given dependencies.
@@ -96,8 +97,8 @@ func (ap *ArticleProcessor) ProcessArticle(articlePath string, options ProcessOp
 
 // skipReason returns why no image is generated for the article, or "" if it should be generated.
 func (ap *ArticleProcessor) skipReason(article *Article, fm *FrontMatter, config *Config) string {
-	// Hugo does not publish drafts by default; an image in public/ would expose an unpublished page.
-	if draft, _ := fm.Fields["draft"].(bool); draft {
+	// An image in public/ for a draft that Hugo does not publish would expose an unpublished page.
+	if draft, _ := fm.Fields["draft"].(bool); draft && !ap.buildDrafts {
 		return "draft"
 	}
 	if !config.Enabled {

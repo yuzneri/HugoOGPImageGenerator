@@ -36,6 +36,14 @@ func NewOGPGenerator(configPath, contentDir, projectRoot string) (*OGPGenerator,
 		return nil, NewFileError("resolve", contentDir, err)
 	}
 
+	buildDrafts, source, err := resolveBuildDrafts(filepath.Dir(contentDir))
+	if err != nil {
+		return nil, err
+	}
+	if buildDrafts {
+		DefaultLogger.Info("Generating images for drafts (buildDrafts is true in %s)", source)
+	}
+
 	configDir := filepath.Dir(configPath)
 
 	fontManager := NewFontManager(configDir)
@@ -43,6 +51,7 @@ func NewOGPGenerator(configPath, contentDir, projectRoot string) (*OGPGenerator,
 	imageRenderer := NewImageRenderer()
 
 	articleProcessor := NewArticleProcessor(config, contentDir, configDir, configPath, fontManager, bgProcessor, imageRenderer)
+	articleProcessor.buildDrafts = buildDrafts
 
 	return &OGPGenerator{
 		config:           config,

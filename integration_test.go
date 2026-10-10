@@ -467,6 +467,7 @@ func TestGenerateSingle_File(t *testing.T) {
 
 // TestGenerateAll_Exclusion tests excluding pages by kind (global and type config) and by front matter.
 func TestGenerateAll_Exclusion(t *testing.T) {
+	unsetBuildDraftsEnv(t)
 	projectRoot := t.TempDir()
 	contentDir := filepath.Join(projectRoot, "content")
 
@@ -586,5 +587,54 @@ func TestGenerateSingle_AbsolutePathWithRelativeRoot(t *testing.T) {
 
 	if _, err := os.Stat(filepath.Join(projectRoot, "public", "ogp.png")); err != nil {
 		t.Errorf("Expected home page image: %v", err)
+	}
+}
+
+// TestGenerateAll_BuildDrafts tests that drafts get images when Hugo publishes them,
+// and that HUGO_BUILDDRAFTS takes precedence over the Hugo configuration file.
+func TestGenerateAll_BuildDrafts(t *testing.T) {
+	tests := []struct {
+		name      string
+		env       string // "" leaves HUGO_BUILDDRAFTS unset
+		hugoToml  string
+		wantDraft bool
+	}{
+		{"default", "", "title = 'x'\n", false},
+		{"hugo.toml", "", "buildDrafts = true\n", true},
+		{"env overrides hugo.toml", "false", "buildDrafts = true\n", false},
+		{"env without config", "true", "title = 'x'\n", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.env == "" {
+				unsetBuildDraftsEnv(t)
+			} else {
+				t.Setenv(BuildDraftsEnv, tt.env)
+			}
+
+			projectRoot := t.TempDir()
+			writeProjectFiles(t, projectRoot, map[string]string{
+				"hugo.toml":                tt.hugoToml,
+				"content/posts/draft.md":   "---\ntitle: Draft\ndraft: true\n---\n",
+				"content/posts/publish.md": "---\ntitle: Published\n---\n",
+			})
+
+			generator, err := NewOGPGenerator(filepath.Join(projectRoot, "config.yaml"), filepath.Join(projectRoot, "content"), projectRoot)
+			if err != nil {
+				t.Fatalf("Failed to create generator: %v", err)
+			}
+			if err := generator.GenerateAll(); err != nil {
+				t.Fatalf("GenerateAll should not return error: %v", err)
+			}
+
+			if _, err := os.Stat(filepath.Join(projectRoot, "public", "posts", "publish", "ogp.png")); err != nil {
+				t.Errorf("Expected image for published page: %v", err)
+			}
+			_, err = os.Stat(filepath.Join(projectRoot, "public", "posts", "draft", "ogp.png"))
+			if gotDraft := err == nil; gotDraft != tt.wantDraft {
+				t.Errorf("draft image generated = %v, want %v", gotDraft, tt.wantDraft)
+			}
+		})
 	}
 }
