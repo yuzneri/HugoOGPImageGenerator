@@ -474,6 +474,7 @@ func TestGenerateAll_Exclusion(t *testing.T) {
 		"content/_index.md":        "---\ntitle: Home\n---\n",
 		"content/about.md":         "---\ntitle: About\n---\n",
 		"content/hidden.md":        "---\ntitle: Hidden\nogp:\n  enabled: false\n---\n",
+		"content/draft.md":         "---\ntitle: Draft\ndraft: true\n---\n",
 		"content/posts/_index.md":  "---\ntitle: Posts\n---\n",
 		"content/posts/post.md":    "---\ntitle: Post\n---\n",
 		"content/events/_index.md": "---\ntitle: Events\n---\n",

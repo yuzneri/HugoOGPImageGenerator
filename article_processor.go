@@ -61,7 +61,7 @@ func (ap *ArticleProcessor) ProcessArticle(articlePath string, options ProcessOp
 		return err
 	}
 
-	if reason := ap.skipReason(article, finalConfig); reason != "" {
+	if reason := ap.skipReason(article, fm, finalConfig); reason != "" {
 		relPath, _ := filepath.Rel(ap.contentDir, article.File)
 		fmt.Printf("Skipped: %s (%s)\n", relPath, reason)
 		return nil
@@ -95,7 +95,11 @@ func (ap *ArticleProcessor) ProcessArticle(articlePath string, options ProcessOp
 }
 
 // skipReason returns why no image is generated for the article, or "" if it should be generated.
-func (ap *ArticleProcessor) skipReason(article *Article, config *Config) string {
+func (ap *ArticleProcessor) skipReason(article *Article, fm *FrontMatter, config *Config) string {
+	// Hugo does not publish drafts by default; an image in public/ would expose an unpublished page.
+	if draft, _ := fm.Fields["draft"].(bool); draft {
+		return "draft"
+	}
 	if !config.Enabled {
 		return "ogp.enabled is false"
 	}

@@ -253,6 +253,8 @@ ogp:
   enabled: false
 ```
 
+Pages with `draft: true` are always skipped, because Hugo does not publish drafts by default and an image in `public/` would expose an unpublished page.
+
 Skipped pages are reported as `Skipped: <path> (<reason>)`, also when given to `--single` or `--test`.
 
 ### Global Configuration
@@ -353,6 +355,7 @@ description: "Article description text"
 date: 2024-01-01
 author: "John Doe"
 ogp:
+  enabled: true              # Set to false to skip this page
   title:
     visible: true
     content: "Custom: {{.Title | upper}}"
@@ -454,6 +457,7 @@ All `.md` pages under `content/` are processed:
 
 - `.md` files inside a leaf bundle (other than `index.md`) are page resources and are skipped.
 - Pages without YAML front matter (no front matter, or TOML/JSON front matter) are skipped with a warning.
+- Drafts (`draft: true`) and pages excluded by `kinds` or `enabled: false` are skipped (see [Page Selection](#page-selection)).
 - For a single-file page, assets are resolved from the directory that contains the file.
 - A section page (`_index.md`) gets the type of its directory, so `content/posts/_index.md` also uses `posts.yaml`. Override it with `ogp:` in the section's front matter, or exclude sections with `kinds` (see [Page Selection](#page-selection)).
 - `slug`, lowercased paths (`disablePathToLower`) and other content formats or extensions (`.markdown`, `.html`, ...) are not taken into account.
