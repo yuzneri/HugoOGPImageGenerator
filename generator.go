@@ -29,6 +29,13 @@ func NewOGPGenerator(configPath, contentDir, projectRoot string) (*OGPGenerator,
 		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
+	// Article paths may be given as absolute paths, so the content directory must be absolute
+	// for page kind detection and output path calculation to compare them.
+	contentDir, err = filepath.Abs(contentDir)
+	if err != nil {
+		return nil, NewFileError("resolve", contentDir, err)
+	}
+
 	configDir := filepath.Dir(configPath)
 
 	fontManager := NewFontManager(configDir)

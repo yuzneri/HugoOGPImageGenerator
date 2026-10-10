@@ -549,3 +549,41 @@ func TestGenerateAll_UnknownKind(t *testing.T) {
 		t.Errorf("expected unknown page kind error, got %v", err)
 	}
 }
+
+// TestGenerateSingle_AbsolutePathWithRelativeRoot tests an absolute article path combined with a relative project root.
+func TestGenerateSingle_AbsolutePathWithRelativeRoot(t *testing.T) {
+	projectRoot := t.TempDir()
+	contentDir := filepath.Join(projectRoot, "content")
+	if err := os.MkdirAll(contentDir, DefaultFilePermission); err != nil {
+		t.Fatal(err)
+	}
+	home := filepath.Join(contentDir, "_index.md")
+	if err := os.WriteFile(home, []byte("---\ntitle: Home\n---\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	configPath := filepath.Join(projectRoot, "config.yaml")
+	if err := os.WriteFile(configPath, []byte("kinds: [home]\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(projectRoot); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chdir(cwd)
+
+	generator, err := NewOGPGenerator(configPath, "content", ".")
+	if err != nil {
+		t.Fatalf("Failed to create generator: %v", err)
+	}
+	if err := generator.GenerateSingle(home); err != nil {
+		t.Fatalf("GenerateSingle should not return error: %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(projectRoot, "public", "ogp.png")); err != nil {
+		t.Errorf("Expected home page image: %v", err)
+	}
+}
